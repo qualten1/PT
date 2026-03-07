@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ProdTrack Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f6fb;--white:#fff;--border:#e5e9f2;--text:#1a2236;--text2:#6b7a99;--text3:#c0c8d8;
+  --ind:#6366f1;--ind-l:#eef0ff;--grn:#10b981;--grn-l:#ecfdf5;--red:#ef4444;--red-l:#fef2f2;
+  --gold:#f59e0b;--gold-l:#fffbeb;--sky:#0ea5e9;--sky-l:#f0f9ff;--vio:#8b5cf6;--vio-l:#f5f3ff;
+  --teal:#14b8a6;--teal-l:#f0fdfa;--shadow:0 2px 8px rgba(0,0,0,.06);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);}
+::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+/* NAV */
+nav{display:flex;align-items:center;background:var(--white);border-bottom:1px solid var(--border);
+  padding:0 16px;height:52px;position:sticky;top:0;z-index:200;gap:2px;overflow-x:auto;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.logo{font-weight:800;font-size:.95rem;color:var(--ind);padding-right:14px;border-right:1px solid var(--border);margin-right:6px;white-space:nowrap;flex-shrink:0;}
+.ntab{height:52px;padding:0 13px;background:none;border:none;border-bottom:3px solid transparent;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:.8rem;font-weight:600;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:color .15s;}
+.ntab:hover{color:var(--text);}
+.ntab.active{color:var(--ind);border-bottom-color:var(--ind);}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+#clock{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);}
+.sbtn{display:flex;align-items:center;gap:5px;background:var(--ind-l);border:1px solid rgba(99,102,241,.2);
+  border-radius:7px;padding:5px 10px;color:var(--ind);font-size:.73rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--grn);transition:background .3s;}
+.sdot.busy{background:var(--gold);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* PAGES */
+.page{display:none;padding:18px;max-width:1400px;margin:0 auto;}
+.page.on{display:block;}
+h1{font-size:1.1rem;font-weight:800;margin-bottom:4px;}
+.sub{font-size:.78rem;color:var(--text2);margin-bottom:16px;}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+.chdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;padding-bottom:11px;border-bottom:1px solid var(--border);}
+.ctitle{font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);}
+
+/* FORM */
+.fg{display:grid;gap:10px;margin-bottom:10px;}
+.fg-2{grid-template-columns:1fr 1fr;}
+.fg-3{grid-template-columns:1fr 1fr 1fr;}
+.fg-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+label{display:block;font-size:.63rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);margin-bottom:3px;}
+input,select,textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:7px;
+  color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.86rem;font-weight:500;
+  padding:8px 10px;outline:none;transition:border-color .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--ind);background:#fff;}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7a99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;background-color:var(--bg);}
+@media(max-width:700px){.fg-2,.fg-3,.fg-4{grid-template-columns:1fr;}}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;border:none;border-radius:7px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;transition:all .15s;}
+.bp{background:var(--ind);color:#fff;padding:9px 18px;font-size:.82rem;}
+.bp:hover{background:#4f46e5;}
+.bg{background:transparent;border:1.5px solid var(--border);color:var(--text2);padding:6px 12px;font-size:.75rem;}
+.bg:hover{border-color:var(--ind);color:var(--ind);}
+.bd{background:var(--red-l);border:1px solid rgba(239,68,68,.25);color:var(--red);padding:4px 9px;font-size:.7rem;}
+.bfull{width:100%;justify-content:center;margin-top:6px;}
+.bsm{padding:5px 11px;font-size:.73rem;}
+
+/* STATUS BADGE */
+.sb{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.66rem;font-weight:700;}
+.s-p{background:var(--gold-l);color:var(--gold);}
+.s-mo{background:var(--sky-l);color:var(--sky);}
+.s-mr{background:var(--teal-l);color:var(--teal);}
+.s-ip{background:var(--ind-l);color:var(--ind);}
+.s-st{background:var(--red-l);color:var(--red);}
+.s-c{background:var(--grn-l);color:var(--grn);}
+.s-d{background:var(--vio-l);color:var(--vio);}
+
+/* DUE CHIPS */
+.dc{font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:5px;}
+.dc-ok{background:var(--grn-l);color:var(--grn);}
+.dc-warn{background:var(--gold-l);color:var(--gold);}
+.dc-late{background:var(--red-l);color:var(--red);}
+
+/* KANBAN */
+.kb-wrap{overflow-x:auto;padding-bottom:8px;}
+.kb{display:flex;gap:10px;min-width:max-content;padding:2px;}
+.kc{width:205px;flex-shrink:0;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:9px;}
+.kc-h{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;margin-bottom:8px;border-bottom:2px solid;}
+.kc-t{font-size:.67rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;}
+.kc-n{font-size:.67rem;font-weight:700;width:19px;height:19px;border-radius:5px;display:flex;align-items:center;justify-content:center;}
+.kcard{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;position:relative;overflow:hidden;transition:box-shadow .15s;}
+.kcard:hover{box-shadow:0 4px 14px rgba(0,0,0,.09);}
+.kcard-stripe{position:absolute;left:0;top:0;bottom:0;width:3px;}
+.kitem{font-size:.75rem;font-weight:800;line-height:1.3;word-break:break-all;}
+.kpo{font-size:.68rem;color:var(--text2);margin-top:1px;}
+.kmeta{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+
+/* TABLE */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.8rem;}
+th{text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(99,102,241,.02);}
+
+/* HISTORY */
+.hc{background:var(--white);border:1.5px solid var(--border);border-radius:11px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);}
+.hh{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;cursor:pointer;flex-wrap:wrap;gap:8px;}
+.hh:hover{background:var(--bg);}
+.hb{display:none;border-top:1px solid var(--border);}
+.hb.on{display:block;}
+.hr{padding:11px 15px;border-bottom:1px solid var(--border);background:var(--bg);}
+.hr:last-child{border-bottom:none;}
+
+/* TOAST / MODAL */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--white);border:1px solid var(--grn);border-radius:9px;padding:9px 18px;font-size:.82rem;font-weight:700;color:var(--grn);z-index:999;transition:transform .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow);}
+.toast.on{transform:translateX(-50%) translateY(0);}
+.toast.e{border-color:var(--red);color:var(--red);}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center;padding:14px;}
+.mbg.on{display:flex;}
+.modal{background:var(--white);border-radius:14px;padding:20px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18);}
+.mtitle{font-size:.9rem;font-weight:800;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.mx{background:none;border:none;font-size:1.3rem;color:var(--text2);cursor:pointer;}
+
+/* MISC */
+.sug{display:none;background:var(--ind-l);border:1.5px solid rgba(99,102,241,.2);border-radius:9px;padding:11px;margin-bottom:10px;}
+.sug.on{display:block;}
+.empty{text-align:center;color:var(--text3);padding:22px;font-size:.8rem;}
+.irow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.83rem;}
+.irow:last-child{border-bottom:none;}
+.irow span:first-child{color:var(--text2);}
+.irow span:last-child{font-weight:600;text-align:right;max-width:60%;}
+.banner{display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:9px;border:1px solid;font-size:.8rem;margin-bottom:14px;}
+.bw{background:var(--gold-l);border-color:rgba(245,158,11,.25);color:#92400e;}
+.bo{background:var(--grn-l);border-color:rgba(16,185,129,.25);color:#065f46;}
+.chip{padding:4px 11px;border-radius:20px;font-size:.71rem;font-weight:600;border:1.5px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif;}
+.chip.on,.chip:hover{background:var(--ind);color:#fff;border-color:var(--ind);}
+
+/* EXCEL UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);}
+.upload-zone:hover,.upload-zone.over{border-color:var(--ind);background:var(--ind-l);}
+.upload-zone.over{transform:scale(1.01);}
+.upload-icon{font-size:2rem;margin-bottom:8px;}
+.upload-title{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:3px;}
+.upload-sub{font-size:.75rem;color:var(--text2);}
+.upload-input{display:none;}
+.import-preview{display:none;margin-top:14px;}
+.import-preview.show{display:block;}
+.preview-row{display:flex;justify-content:space-between;align-items:center;padding:8px 11px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:.8rem;}
+.preview-row .item{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.preview-row .meta{font-size:.72rem;color:var(--text2);margin-left:8px;flex-shrink:0;}
+.import-count{font-size:.78rem;color:var(--ind);font-weight:700;margin-bottom:10px;}
+
+
+.est-row{display:flex;gap:6px;align-items:center;margin-bottom:5px;}
+.est-row input{flex:1;padding:6px 9px;font-size:.82rem;}
+.est-row .est-op{flex:2;}
+.est-row .est-time{flex:1;max-width:90px;}
+.est-row-del{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;padding:4px;flex-shrink:0;}
+.est-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px;}
+.est-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">⚙️ ProdTrack</div>
+  <button class="ntab active" onclick="go('jobs',this)">📋 Jobs</button>
+  <button class="ntab" onclick="go('kanban',this)">🗂 Kanban</button>
+  <button class="ntab" onclick="go('timings',this)">⏱ Timings</button>
+  <button class="ntab" onclick="go('history',this)">📚 History</button>
+  <button class="ntab" onclick="go('operators',this)">👷 Operators</button>
+  <button class="ntab" onclick="go('import',this)">📥 Import Excel</button>
+  <div class="nav-r">
+    <button class="sbtn" onclick="sync()"><div class="sdot" id="sdot"></div><span id="slbl">Sync</span></button>
+    <div id="clock">—</div>
+  </div>
+</nav>
+
+<!-- ═══ JOBS ═══ -->
+<div class="page on" id="pg-jobs">
+  <h1>📋 Jobs</h1><div class="sub">Add new jobs or manage existing ones. All data syncs to Google Sheet.</div>
+  <div id="banner" class="banner bw">⚠ Not connected to Google Sheet. Update the SHEET_API_URL in this file.</div>
+  <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;">
+    <div>
+      <div class="card">
+        <div class="chdr"><div class="ctitle">➕ New Job</div></div>
+        <div class="fg fg-2">
+          <div><label>PO Number</label><input id="fPO" placeholder="8425000052"></div>
+          <div><label>PO Date</label><input id="fPODate" type="date"></div>
+        </div>
+        <div style="margin-bottom:10px;"><label>Customer</label><input id="fCust" placeholder="Jagdish / Sunil..." list="custDL"><datalist id="custDL"></datalist></div>
+        <div style="margin-bottom:10px;"><label>Item / DRG Number *</label><input id="fItem" placeholder="SPF00194A337000000" oninput="onItemType(this.value)"></div>
+
+        <!-- History suggestion + editable estimates -->
+        <div class="sug" id="sug">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-size:.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ind);" id="sugTitle">💡 History Found</div>
+            <button class="btn bg bsm" onclick="closeSug()">✕</button>
+          </div>
+          <div id="sugBody"></div>
+          <button class="btn bp bsm" style="margin-top:8px;width:100%;justify-content:center;" onclick="applySugEsts()">✓ Use These Estimates</button>
+        </div>
+
+        <!-- Estimated times per operation (editable) -->
+        <div style="margin-bottom:10px;">
+          <label>Estimated Time Per Operation <span style="font-size:.65rem;color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">(optional — shown to operators as target)</span></label>
+          <div id="estRows" style="margin-bottom:6px;"></div>
+          <button class="btn bg bsm" onclick="addEstRow()" style="font-size:.7rem;">+ Add Operation</button>
+        </div>
+
+        <div class="fg fg-3" style="margin-bottom:10px;">
+          <div><label>Quantity</label><input id="fQty" type="number" placeholder="10"></div>
+          <div><label>Price (₹)</label><input id="fPrice" type="number" placeholder="5500"></div>
+          <div><label>NBD (Due)</label><input id="fNBD" type="date"></div>
+        </div>
+        <div class="fg fg-2" style="margin-bottom:10px;">
+          <div>
+            <label>Status</label>
+            <select id="fStatus">
+              <option>Pending</option>
+              <option>Material Ordered</option>
+              <option>Material Received</option>
+              <option>In Process</option>
+              <option>Stuck</option>
+              <option>Completed</option>
+              <option>Delivered</option>
+            </select>
+          </div>
+          <div><label>Mat Notes</label><input id="fMatNotes" placeholder="50 recd 25-Apr"></div>
+        </div>
+        <div style="margin-bottom:10px;"><label>Notes</label><input id="fNotes" placeholder="Special instructions..."></div>
+        <button class="btn bp bfull" onclick="addJob()">+ ADD JOB</button>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="chdr">
+          <div class="ctitle">All Jobs</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <button class="chip on" onclick="setFilter('all',this)">All</button>
+            <button class="chip" onclick="setFilter('Pending',this)">Pending</button>
+            <button class="chip" onclick="setFilter('In Process',this)">Active</button>
+            <button class="chip" onclick="setFilter('Stuck',this)">Stuck</button>
+            <button class="chip" onclick="setFilter('Completed',this)">Done</button>
+          </div>
+        </div>
+        <div id="jobList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ KANBAN ═══ -->
+<div class="page" id="pg-kanban">
+  <h1>🗂 Kanban Pipeline</h1><div class="sub">All jobs by status. Click a card to update status.</div>
+  <div class="card">
+    <div class="chdr"><div class="ctitle">Production Pipeline</div><button class="btn bg bsm" onclick="sync()">↻ Sync</button></div>
+    <div class="kb-wrap"><div class="kb" id="kboard"></div></div>
+  </div>
+</div>
+
+<!-- ═══ TIMINGS ═══ -->
+<div class="page" id="pg-timings">
+  <h1>⏱ Production Timings</h1><div class="sub">All operator time entries from your Google Sheet "Timings" tab.</div>
+  <div class="card">
+    <div class="chdr">
+      <div class="ctitle">Time Log</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="tsearch" placeholder="Search operator or item..." style="width:200px;padding:6px 10px;font-size:.8rem;" oninput="renderTimings()">
+        <button class="btn bg bsm" onclick="sync()">↻ Sync</button>
+      </div>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Operator</th><th>DRG Number</th><th>Operation</th>
+          <th>Start</th><th>End</th><th>Qty</th><th>Total Time</th><th>Per Piece</th><th>Remarks</th><th></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HISTORY ═══ -->
+<div class="page" id="pg-history">
+  <h1>📚 Part History</h1><div class="sub">Per-piece time for every part. Built automatically from Timings. Click + New Job to use history.</div>
+  <div class="card">
+    <div class="chdr"><div class="ctitle">All Parts</div><span style="font-size:.73rem;color:var(--text2);" id="hcount">—</span></div>
+    <input id="hsearch" placeholder="🔍 Search part or operator..." style="margin-bottom:14px;padding:8px 12px;" oninput="renderHistory()">
+    <div id="hlist"></div>
+  </div>
+</div>
+
+<!-- ═══ OPERATORS ═══ -->
+<div class="page" id="pg-operators">
+  <h1>👷 Operator Links</h1><div class="sub">Share these links via WhatsApp. Each link automatically identifies the operator.</div>
+  <div class="card" id="oplist"></div>
+</div>
+
+<!-- Modals -->
+
+<!-- ═══ IMPORT EXCEL ═══ -->
+<div class="page" id="pg-import">
+  <h1>📥 Import from Excel</h1>
+  <div class="sub">Upload your Kanban Excel file — jobs are auto-imported. Matches your existing format: PO No, Customer, Item Desc, Qty, Price, NBD, Status.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      <div class="card">
+        <div class="chdr"><div class="ctitle">Upload Excel File</div></div>
+        <div class="upload-zone" id="uploadZone"
+          ondragover="event.preventDefault();this.classList.add('over')"
+          ondragleave="this.classList.remove('over')"
+          ondrop="handleDrop(event)"
+          onclick="document.getElementById('xlsxInput').click()">
+          <div class="upload-icon">📊</div>
+          <div class="upload-title">Drop your Kanban Excel here</div>
+          <div class="upload-sub">or click to browse · .xlsx, .xls files only</div>
+        </div>
+        <input type="file" id="xlsxInput" class="upload-input" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+
+        <div class="import-preview" id="importPreview">
+          <div class="import-count" id="importCount">—</div>
+          <div id="previewList"></div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn bp bfull" onclick="confirmImport()">✓ Import All Jobs</button>
+            <button class="btn bg bfull" onclick="clearImport()">✕ Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="chdr"><div class="ctitle">📋 Expected Format</div></div>
+        <div style="font-size:.78rem;color:var(--text2);line-height:1.8;">
+          Your Excel file should have these columns (any order):<br><br>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
+            <div>✓ <b>PO No.</b> or PO No</div>
+            <div>✓ <b>PO Date</b></div>
+            <div>✓ <b>Item Desc</b></div>
+            <div>✓ <b>Qty</b></div>
+            <div>✓ <b>Price</b></div>
+            <div>✓ <b>NBD</b> (due date)</div>
+            <div>✓ <b>Customer</b> or Col 2</div>
+            <div>✓ <b>Status</b> (optional)</div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:var(--ind-l);border-radius:8px;font-size:.75rem;color:var(--ind);">
+            💡 Your existing Kanban Excel file already matches this format — just upload it directly.
+            The importer auto-detects the customer from column 2 and the status from the Delivered/Completed columns.
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="chdr"><div class="ctitle">Direct Sheet Edit</div></div>
+        <div style="font-size:.78rem;color:var(--text2);line-height:1.8;">
+          You can also edit the Google Sheet directly and click Sync:<br><br>
+          <b>Jobs tab columns (exact):</b><br>
+          PO No · PO Date · Customer · Item Desc · Qty · Price · NBD · Notes · Status · Mat Notes<br><br>
+          <b>Timings tab columns (exact):</b><br>
+          OPERATOR · DRG NUMBER · OPERATION · START TIME · END TIME · QUANTITY · DATE · REMARKS · TOTAL TIME · TIME PER PIECE<br><br>
+          <button class="btn bp bsm" onclick="sync()">↻ Sync from Sheet now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mbg" id="jmodal">
+  <div class="modal">
+    <div class="mtitle"><span id="jmtitle">—</span><button class="mx" onclick="cm('jmodal')">×</button></div>
+    <div id="jmbody"></div>
+  </div>
+</div>
+<div class="mbg" id="cmodal">
+  <div class="modal" style="max-width:360px;">
+    <div class="mtitle"><span>Confirm Delete</span><button class="mx" onclick="cm('cmodal')">×</button></div>
+    <p style="color:var(--text2);font-size:.85rem;margin-bottom:16px;" id="ctxt"></p>
+    <div style="display:flex;gap:10px;">
+      <button class="btn bg bfull" onclick="cm('cmodal')">Cancel</button>
+      <button class="btn bd bfull" style="padding:9px;font-size:.82rem;" id="cbtn">Delete</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="t"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONFIG — your Apps Script URL is already here
+// ═══════════════════════════════════════════════
+const API = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQbVu0cTeEAKytfbafCogToCW-R53XBMcZrE2Zz3dE/exec';
+const SITE = window.location.href.replace(/index\.html.*$|\/$/,'');
+
+const STATUSES = [
+  {id:'Pending',           cls:'s-p',  color:'#f59e0b'},
+  {id:'Material Ordered',  cls:'s-mo', color:'#0ea5e9'},
+  {id:'Material Received', cls:'s-mr', color:'#14b8a6'},
+  {id:'In Process',        cls:'s-ip', color:'#6366f1'},
+  {id:'Stuck',             cls:'s-st', color:'#ef4444'},
+  {id:'Completed',         cls:'s-c',  color:'#10b981'},
+  {id:'Delivered',         cls:'s-d',  color:'#8b5cf6'},
+];
+
+const OPS = [
+  {id:'MAH1A',name:'Mahesh'},{id:'VIS2B',name:'Vishnu'},{id:'HAR3C',name:'Harshad'},
+  {id:'BHA4D',name:'Bhavesh'},{id:'CNC5E',name:'CNC'},{id:'VMC6F',name:'VMC'},
+  {id:'KIS7G',name:'Kishan'},{id:'NAR8H',name:'Naresh'},{id:'HLP9I',name:'Helper 1'},{id:'HLP0J',name:'Helper 2'},
+];
+
+let DB={jobs:[],timeLogs:[]};
+let curTab='jobs', jobFilter='all';
+
+// ── UTILS ──────────────────────────────────────
+const $ = id => document.getElementById(id);
+function fd(d){if(!d)return'—';try{const p=d.includes('/')?d.split('/').reverse().join('-'):d;return new Date(p+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch{return d;}}
+function daysLeft(d){if(!d)return null;try{const p=d.includes('/')?d.split('/').reverse().join('-'):d;return Math.ceil((new Date(p+'T00:00:00')-new Date())/86400000);}catch{return null;}}
+function dueChip(d){const n=daysLeft(d);if(n===null)return'';if(n<0)return`<span class="dc dc-late">${Math.abs(n)}d LATE</span>`;if(n<=3)return`<span class="dc dc-warn">${n===0?'TODAY':n+'d'}</span>`;return`<span class="dc dc-ok">${n}d</span>`;}
+function sbadge(s){const st=STATUSES.find(x=>x.id===s)||{cls:'',id:s||'—'};return`<span class="sb ${st.cls}">${st.id}</span>`;}
+function toast(m,e=false){const t=$('t');t.textContent=m;t.className='toast'+(e?' e':'')+' on';setTimeout(()=>t.className='toast'+(e?' e':''),2800);}
+function cm(id){$(id).classList.remove('on');}
+
+// ── CLOCK ──────────────────────────────────────
+setInterval(()=>$('clock').textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),1000);
+
+// ── SYNC ───────────────────────────────────────
+async function sync(){
+  const dot=$('sdot'),lbl=$('slbl');
+  dot.className='sdot busy'; lbl.textContent='Syncing...';
+  try{
+    const r=await fetch(API+'?action=getAll');
+    const d=await r.json();
+    if(!d.ok) throw new Error(d.error||'API error');
+    if(d.jobs)     DB.jobs=d.jobs;
+    if(d.timeLogs) DB.timeLogs=d.timeLogs;
+    dot.className='sdot'; dot.style.background='var(--grn)';
+    lbl.textContent='Synced ✓';
+    $('banner').className='banner bo';
+    $('banner').textContent='✅ Connected to Google Sheet';
+    renderAll(); toast('Synced from Google Sheet');
+  }catch(e){
+    dot.className='sdot'; dot.style.background='var(--red)';
+    lbl.textContent='Failed';
+    toast('Sync failed — check Apps Script URL',true);
+    console.error(e);
+  }
+}
+setInterval(sync,60000);
+
+async function push(action,data){
+  try{ await fetch(API,{method:'POST',body:JSON.stringify({action,...data})}); }
+  catch(e){ console.warn('Push failed',e); }
+}
+
+// ── TABS ───────────────────────────────────────
+function go(tab,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'));
+  $('pg-'+tab).classList.add('on'); btn.classList.add('active'); curTab=tab;
+  renderAll();
+}
+function renderAll(){
+  if(curTab==='jobs')      renderJobs();
+  if(curTab==='kanban')    renderKanban();
+  if(curTab==='timings')   renderTimings();
+  if(curTab==='history')   renderHistory();
+  if(curTab==='operators') renderOps();
+}
+
+// ── JOBS ───────────────────────────────────────
+function addJob(){
+  const item=$('fItem').value.trim();
+  if(!item){toast('Item/DRG Number is required!',true);return;}
+  const estData=collectEstimates();
+  const job={
+    'PO No':     $('fPO').value.trim(),
+    'PO Date':   $('fPODate').value,
+    'Customer':  $('fCust').value.trim(),
+    'Item Desc': item,
+    'Qty':       $('fQty').value,
+    'Price':     $('fPrice').value,
+    'NBD':       $('fNBD').value,
+    'Notes':     $('fNotes').value.trim(),
+    'Status':    $('fStatus').value,
+    'Mat Notes': $('fMatNotes').value.trim(),
+    'Est Times': estData ? JSON.stringify(estData) : '',
+  };
+  DB.jobs.unshift(job);
+  push('addJob',job);
+  ['fPO','fPODate','fCust','fItem','fQty','fPrice','fNBD','fNotes','fMatNotes'].forEach(id=>{$(id).value='';});
+  $('fStatus').value='Pending';
+  closeSug();
+  clearEstRows();
+  renderJobs(); renderKanban(); updateCustList();
+  toast(`Job added: ${item}`);
+}
+
+function renderJobs(){
+  const el=$('jobList'); if(!el)return;
+  let jobs=[...DB.jobs];
+  if(jobFilter!=='all') jobs=jobs.filter(j=>j['Status']===jobFilter);
+  jobs.sort((a,b)=>(daysLeft(a['NBD'])??9999)-(daysLeft(b['NBD'])??9999));
+  el.innerHTML='';
+  if(!jobs.length){el.innerHTML='<div class="empty">No jobs found</div>';return;}
+  jobs.forEach(j=>{
+    const d=document.createElement('div');
+    d.style.cssText='background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:11px;margin-bottom:8px;border-left:3px solid '+((STATUSES.find(s=>s.id===j['Status'])||{color:'#e5e9f2'}).color)+';';
+    d.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
+            <span style="font-weight:800;font-size:.88rem;word-break:break-all;">${j['Item Desc']||'—'}</span>
+            ${sbadge(j['Status'])} ${dueChip(j['NBD'])}
+          </div>
+          <div style="font-size:.75rem;color:var(--text2);">
+            ${j['PO No']?`<b>PO:</b> ${j['PO No']} &nbsp;`:''}
+            ${j['Customer']?`<b>Customer:</b> ${j['Customer']} &nbsp;`:''}
+            ${j['Qty']?`×${j['Qty']} pcs &nbsp;`:''}
+            ${j['Price']?`₹${Number(j['Price']).toLocaleString('en-IN')}`:''}
+          </div>
+          ${j['NBD']?`<div style="font-size:.72rem;color:var(--text2);margin-top:2px;">📅 NBD: ${fd(j['NBD'])}</div>`:''}
+          ${j['Mat Notes']?`<div style="font-size:.71rem;color:var(--sky);margin-top:2px;">📦 ${j['Mat Notes']}</div>`:''}
+          ${j['Notes']?`<div style="font-size:.71rem;color:var(--text2);margin-top:2px;font-style:italic;">${j['Notes']}</div>`:''}
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+          <button class="btn bg bsm" onclick='openJob(${JSON.stringify(j)})'>Edit</button>
+          <button class="btn bd" onclick='delJob("${(j['Item Desc']||'').replace(/"/g,'&quot;')}","${(j['PO No']||'').replace(/"/g,'&quot;')}">🗑</button>
+        </div>
+      </div>`;
+    el.appendChild(d);
+  });
+}
+
+function setFilter(f,btn){
+  jobFilter=f;
+  document.querySelectorAll('#pg-jobs .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on'); renderJobs();
+}
+
+function updateCustList(){
+  const dl=$('custDL'); if(!dl)return;
+  [...new Set(DB.jobs.map(j=>j['Customer']).filter(Boolean))].forEach(c=>{
+    const o=document.createElement('option');o.value=c;dl.appendChild(o);
+  });
+}
+
+// ── JOB MODAL ──────────────────────────────────
+function openJob(j){
+  $('jmtitle').textContent=j['Item Desc']||'Job';
+  $('jmbody').innerHTML=`
+    <div style="margin-bottom:14px;">
+      ${[['PO Number',j['PO No']],['Customer',j['Customer']],['Quantity',j['Qty']?j['Qty']+' pcs':'—'],
+         ['Price',j['Price']?'₹'+Number(j['Price']).toLocaleString('en-IN'):'—'],
+         ['PO Date',fd(j['PO Date'])],['NBD / Due',fd(j['NBD'])],
+         ['Notes',j['Notes']],['Mat Notes',j['Mat Notes']]].map(([k,v])=>`
+        <div class="irow"><span>${k}</span><span>${v||'—'}</span></div>`).join('')}
+    </div>
+    <label style="margin-bottom:5px;">Update Status</label>
+    <select id="mstat" style="margin-bottom:12px;">
+      ${STATUSES.map(s=>`<option ${j['Status']===s.id?'selected':''}>${s.id}</option>`).join('')}
+    </select>
+    <button class="btn bp bfull" onclick="applyStatus('${(j['Item Desc']||'').replace(/'/g,"\\'")}')">Update Status</button>`;
+  $('jmodal').classList.add('on');
+}
+
+function applyStatus(item){
+  const status=$('mstat').value;
+  const j=DB.jobs.find(x=>x['Item Desc']===item);
+  if(j){ j['Status']=status; push('updateStatus',{item,status}); }
+  cm('jmodal'); renderJobs(); renderKanban(); toast('Status updated');
+}
+
+function delJob(item,po){
+  $('ctxt').textContent=`Delete: ${item}?`;
+  $('cbtn').onclick=()=>{
+    DB.jobs=DB.jobs.filter(j=>j['Item Desc']!==item);
+    push('deleteJob',{item,po});
+    cm('cmodal'); renderJobs(); renderKanban(); toast('Job deleted');
+  };
+  $('cmodal').classList.add('on');
+}
+
+// ── KANBAN ─────────────────────────────────────
+function renderKanban(){
+  const b=$('kboard'); if(!b)return;
+  b.innerHTML='';
+  STATUSES.forEach(col=>{
+    const jobs=DB.jobs.filter(j=>(j['Status']||'Pending')===col.id);
+    const colEl=document.createElement('div');
+    colEl.className='kc';
+    const cards=jobs.length?jobs.map(j=>{
+      const dl=daysLeft(j['NBD']);
+      const dc=dl===null?'':(dl<0?'dc-late':dl<=3?'dc-warn':'dc-ok');
+      const dl2=dl===null?'':(dl<0?Math.abs(dl)+'d LATE':dl===0?'TODAY':dl+'d');
+      return `<div class="kcard" onclick='openJob(${JSON.stringify(j)})'>
+        <div class="kcard-stripe" style="background:${col.color};"></div>
+        <div style="padding-left:5px;">
+          <div class="kitem">${j['Item Desc']||'—'}</div>
+          ${j['PO No']?`<div class="kpo">PO: ${j['PO No']}</div>`:''}
+          ${j['Customer']?`<div style="font-size:.67rem;color:var(--text2);">${j['Customer']}</div>`:''}
+          <div class="kmeta">
+            ${j['Qty']?`<span style="font-size:.65rem;color:var(--text2);">×${j['Qty']}</span>`:''}
+            ${dl2?`<span class="dc ${dc}">${dl2}</span>`:''}
+          </div>
+          ${j['Mat Notes']?`<div style="font-size:.64rem;color:var(--sky);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">📦 ${j['Mat Notes']}</div>`:''}
+        </div>
+      </div>`;
+    }).join(''):'<div style="text-align:center;font-size:.7rem;color:var(--text3);padding:8px;">—</div>';
+    colEl.innerHTML=`<div class="kc-h" style="border-color:${col.color};">
+      <span class="kc-t" style="color:${col.color};">${col.id}</span>
+      <span class="kc-n" style="background:${col.color}20;color:${col.color};">${jobs.length}</span>
+    </div>${cards}`;
+    b.appendChild(colEl);
+  });
+}
+
+// ── TIMINGS ────────────────────────────────────
+function renderTimings(){
+  const tb=$('tbody'); if(!tb)return;
+  const q=($('tsearch')?.value||'').toLowerCase();
+  let logs=[...DB.timeLogs];
+  if(q) logs=logs.filter(l=>
+    (l['OPERATOR']||'').toLowerCase().includes(q)||
+    (l['DRG NUMBER']||'').toLowerCase().includes(q)||
+    (l['OPERATION']||'').toLowerCase().includes(q)
+  );
+  logs.sort((a,b)=>String(b['DATE']).localeCompare(String(a['DATE'])));
+  tb.innerHTML='';
+  if(!logs.length){tb.innerHTML='<tr><td colspan="11" class="empty">No timings found. Operators log time via their link.</td></tr>';return;}
+  logs.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.73rem;white-space:nowrap;">${l['DATE']||'—'}</td>
+      <td style="font-weight:700;">${l['OPERATOR']||'—'}</td>
+      <td style="font-size:.77rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${l['DRG NUMBER']||''}">${l['DRG NUMBER']||'—'}</td>
+      <td style="font-size:.76rem;color:var(--text2);">${l['OPERATION']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;">${l['START TIME']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;">${l['END TIME']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;">${l['QUANTITY']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--ind);">${l['TOTAL TIME']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--grn);">${l['TIME PER PIECE']||'—'}</td>
+      <td style="font-size:.71rem;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l['REMARKS']||'—'}</td>
+      <td><button class="btn bd" onclick='delLog("${(l['OPERATOR']||'').replace(/"/g,'&quot;')}","${(l['DRG NUMBER']||'').replace(/"/g,'&quot;')}","${(l['OPERATION']||'').replace(/"/g,'&quot;')}","${l['DATE']||''}")'>🗑</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function delLog(op,drg,operation,date){
+  $('ctxt').textContent=`Delete log: ${op} — ${drg}?`;
+  $('cbtn').onclick=()=>{
+    DB.timeLogs=DB.timeLogs.filter(l=>!(l['OPERATOR']===op&&l['DRG NUMBER']===drg&&l['OPERATION']===operation));
+    push('deleteLog',{operator:op,drgNumber:drg,operation,date});
+    cm('cmodal'); renderTimings(); toast('Log deleted');
+  };
+  $('cmodal').classList.add('on');
+}
+
+// ── HISTORY ────────────────────────────────────
+function buildHistory(){
+  const idx={};
+  DB.timeLogs.forEach(l=>{
+    const k=(l['DRG NUMBER']||'').trim().toLowerCase();
+    if(!k)return;
+    if(!idx[k]){idx[k]={name:l['DRG NUMBER'],runs:[]};}
+    idx[k].runs.push({
+      date:l['DATE'],operator:l['OPERATOR'],operation:l['OPERATION'],
+      start:l['START TIME'],end:l['END TIME'],qty:l['QUANTITY'],
+      total:l['TOTAL TIME'],perPc:l['TIME PER PIECE'],remarks:l['REMARKS']
+    });
+  });
+  Object.values(idx).forEach(e=>e.runs.sort((a,b)=>String(b.date).localeCompare(String(a.date))));
+  return idx;
+}
+
+// ── ESTIMATED TIMES SYSTEM ─────────────────────────────────
+let _sugOps = {}; // {operation: perPieceTime}
+
+function onItemType(v){
+  const s=$('sug'); if(!s)return;
+  if(!v||v.length<3){s.classList.remove('on');return;}
+  const idx=buildHistory();
+  const e=idx[v.trim().toLowerCase()];
+  if(!e){s.classList.remove('on');return;}
+
+  // Build per-operation averages from all history runs
+  const opData={};
+  e.runs.forEach(r=>{
+    if(!r.operation) return;
+    if(!opData[r.operation]) opData[r.operation]={times:[],perPcs:[]};
+    if(r.total) opData[r.operation].times.push(r.total);
+    if(r.perPc) opData[r.operation].perPcs.push(r.perPc);
+  });
+
+  _sugOps={};
+  Object.entries(opData).forEach(([op,d])=>{
+    // Use most recent per-piece time
+    _sugOps[op] = d.perPcs.length ? d.perPcs[0] : (d.times.length ? d.times[0] : '');
+  });
+
+  const qty=parseInt($('fQty')?.value)||1;
+  $('sugTitle').textContent=`💡 "${e.name}" — ${e.runs.length} past run${e.runs.length!==1?'s':''}, last: ${fd(e.runs[0].date)}`;
+  $('sugBody').innerHTML=Object.entries(_sugOps).map(([op,pp])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(99,102,241,.1);">
+      <span style="font-weight:600;">${op}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--ind);font-weight:700;font-size:.82rem;">${pp}/pc</span>
+        ${qty>1?`<span style="font-size:.7rem;color:var(--text2);">×${qty} = ${multiplyTime(pp,qty)}</span>`:''}
+      </div>
+    </div>`).join('');
+  s.classList.add('on');
+}
+
+function closeSug(){$('sug').classList.remove('on');}
+
+function applySugEsts(){
+  // Pre-fill the estimate rows with history data
+  clearEstRows();
+  Object.entries(_sugOps).forEach(([op,pp])=>{
+    addEstRow(op, pp);
+  });
+  closeSug();
+}
+
+// ── EST ROW MANAGEMENT ──────────────────────────────────────
+const COMMON_OPS=['Final Turning','Rough Turning','Threading','Drilling','Chamfer','Milling','VMC','CNC Turning','Boring','Grinding','Inspection','Packing'];
+
+function addEstRow(op='', time=''){
+  const container=$('estRows');
+  const div=document.createElement('div');
+  div.className='est-row';
+  div.innerHTML=`
+    <input class="f-inp est-op" placeholder="Operation (e.g. Final Turning)" value="${op}" list="opDL">
+    <input class="f-inp est-time" placeholder="HH:MM/pc" value="${time}" title="Time per piece e.g. 00:45">
+    <button class="est-row-del" onclick="this.parentElement.remove()" title="Remove">×</button>`;
+  container.appendChild(div);
+  // Add datalist once
+  if(!document.getElementById('opDL')){
+    const dl=document.createElement('datalist');
+    dl.id='opDL';
+    dl.innerHTML=COMMON_OPS.map(o=>`<option value="${o}">`).join('');
+    document.body.appendChild(dl);
+  }
+}
+
+function clearEstRows(){
+  const c=$('estRows'); if(c) c.innerHTML='';
+}
+
+function collectEstimates(){
+  const rows=document.querySelectorAll('.est-row');
+  if(!rows.length) return null;
+  const result={};
+  rows.forEach(row=>{
+    const op=row.querySelector('.est-op')?.value.trim();
+    const time=row.querySelector('.est-time')?.value.trim();
+    if(op&&time) result[op]=time;
+  });
+  return Object.keys(result).length ? result : null;
+}
+
+// Multiply HH:MM time by qty → return HH:MM string
+function multiplyTime(t, qty){
+  if(!t||!qty) return '—';
+  const parts=t.split(':');
+  if(parts.length<2) return '—';
+  const totalMins=Math.round((parseInt(parts[0])*60+parseInt(parts[1]))*qty);
+  return Math.floor(totalMins/60)+'h '+(totalMins%60?totalMins%60+'m':'');
+}
+
+function renderHistory(){
+  const idx=buildHistory();
+  const q=($('hsearch')?.value||'').toLowerCase();
+  let entries=Object.values(idx);
+  if(q) entries=entries.filter(e=>e.name.toLowerCase().includes(q)||e.runs.some(r=>(r.operator||'').toLowerCase().includes(q)));
+  entries.sort((a,b)=>a.name.localeCompare(b.name));
+  const list=$('hlist'),cnt=$('hcount'); if(!list)return;
+  cnt.textContent=`${entries.length} unique parts`;
+  if(!entries.length){list.innerHTML='<div class="empty">📭 No history yet. Operators log time via their links, it appears here automatically.</div>';return;}
+  list.innerHTML='';
+  entries.forEach(e=>{
+    const card=document.createElement('div');
+    card.className='hc';
+    const runs=e.runs.map(r=>`
+      <div class="hr">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          <div>
+            <span style="font-weight:700;">${r.operator||'—'}</span>
+            <span style="color:var(--text2);font-size:.77rem;"> · ${r.operation||'—'}</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);">${r.start||'—'} → ${r.end||'—'}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--ind);">${r.total||'—'} total</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--grn);">${r.perPc||'—'}/pc</span>
+            <span style="font-size:.7rem;color:var(--text2);">×${r.qty||'?'} pcs</span>
+            <span style="font-size:.7rem;color:var(--ind);">📅 ${fd(r.date)}</span>
+          </div>
+        </div>
+        ${r.remarks?`<div style="font-size:.7rem;color:var(--text2);border-left:2px solid var(--border);padding-left:7px;">${r.remarks}</div>`:''}
+      </div>`).join('');
+    card.innerHTML=`
+      <div class="hh" onclick="toggleH(this)">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <span style="font-weight:800;font-size:.92rem;">${e.name}</span>
+          <span style="font-size:.68rem;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 7px;">${e.runs.length} log${e.runs.length!==1?'s':''}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;">
+          <span style="font-size:.72rem;color:var(--text2);">Last: ${fd(e.runs[0].date)}</span>
+          <button class="btn bp bsm" onclick="event.stopPropagation();prefill('${e.name.replace(/'/g,"\\'")}')">+ New Job</button>
+          <span style="color:var(--text3);">▾</span>
+        </div>
+      </div>
+      <div class="hb">${runs}</div>`;
+    list.appendChild(card);
+  });
+}
+
+function toggleH(h){
+  const b=h.nextElementSibling;
+  b.classList.toggle('on');
+  const a=h.querySelector('span:last-child');
+  if(a)a.textContent=b.classList.contains('on')?'▴':'▾';
+}
+function prefill(name){
+  document.querySelector('.ntab').click();
+  setTimeout(()=>{
+    const i=$('fItem');
+    if(i){i.value=name;i.focus();onItemType(name);i.scrollIntoView({behavior:'smooth',block:'center'});}
+  },100);
+}
+
+// ── OPERATORS ──────────────────────────────────
+function renderOps(){
+  const el=$('oplist'); if(!el)return;
+  el.innerHTML='<div class="chdr"><div class="ctitle">Operator Login Links</div></div>'+
+  OPS.map(op=>{
+    const link=`${SITE}/operator.html?op=${op.id}`;
+    const wa=encodeURIComponent(`Hi ${op.name}! Your ProdTrack link:\n${link}\n\nSave to home screen. Do not share.`);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:9px;margin-bottom:7px;flex-wrap:wrap;">
+      <div style="min-width:90px;"><div style="font-weight:700;">${op.name}</div><div style="font-size:.66rem;color:var(--text2);font-family:'JetBrains Mono',monospace;">${op.id}</div></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${link}</div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn bg bsm" onclick="copyLink('${link}','${op.name}')">📋 Copy</button>
+        <a href="https://wa.me/?text=${wa}" target="_blank"><button class="btn bsm" style="background:var(--grn-l);border:1px solid rgba(16,185,129,.2);color:var(--grn);">WhatsApp</button></a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyLink(link,name){
+  navigator.clipboard.writeText(link).catch(()=>{
+    const t=document.createElement('textarea');t.value=link;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();
+  });
+  toast(`Link copied for ${name}`);
+}
+
+
+// ═══════════════════════════════════════════
+// EXCEL IMPORT
+// ═══════════════════════════════════════════
+let _importRows = [];
+
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+}
+
+function handleFile(file){
+  if(!file) return;
+  if(!file.name.match(/\.xlsx?$/i)){toast('Please upload an .xlsx or .xls file',true);return;}
+  const reader = new FileReader();
+  reader.onload = e => parseExcel(e.target.result);
+  reader.readAsArrayBuffer(file);
+}
+
+function parseExcel(buffer){
+  try{
+    const wb   = XLSX.read(buffer, {type:'array', cellDates:true});
+    // Use first sheet
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {raw:false, dateNF:'DD/MM/YYYY', defval:''});
+
+    if(!rows.length){toast('No data found in Excel file',true);return;}
+
+    // Map columns — handle your Kanban format with flexible header names
+    _importRows = rows.map(r=>{
+      // Normalise keys
+      const keys = Object.keys(r);
+      const get  = (...names) => {
+        for(const n of names){
+          const k = keys.find(k=>k.trim().toLowerCase().replace(/[.\s]/g,'').includes(n.toLowerCase().replace(/[.\s]/g,'')));
+          if(k && r[k]!=='') return String(r[k]).trim();
+        }
+        return '';
+      };
+
+      // Detect status from Kanban-style columns
+      let status = get('status') || 'Pending';
+      if(!status || status==='Pending'){
+        if(get('delivered')!=='') status='Delivered';
+        else if(get('completed')!=='') status='Completed';
+        else if(get('inprocess','in process')!=='') status='In Process';
+        else if(get('stuck')!=='') status='Stuck';
+        else if(get('matrecd','mat recd','matrecieved')!=='') status='Material Received';
+        else if(get('mtordered','mt ordered','matordered')!=='') status='Material Ordered';
+        else status='Pending';
+      }
+
+      // Customer is often in column 2 (index 1) when no "Customer" header
+      const custKey = keys[1]; // typically col 2 = customer name in your format
+      const customer = get('customer') || (custKey && !['po','item','qty','price','nbd','date'].some(x=>custKey.toLowerCase().includes(x)) ? String(r[custKey]||'').trim() : '');
+
+      const itemDesc = get('item desc','item','drg','drawing');
+      if(!itemDesc) return null; // skip rows with no item
+
+      return {
+        'PO No':    get('po no','pono','po number'),
+        'PO Date':  get('po date','podate'),
+        'Customer': customer,
+        'Item Desc':itemDesc,
+        'Qty':      get('qty','quantity'),
+        'Price':    get('price'),
+        'NBD':      get('nbd','due','needed by'),
+        'Notes':    get('notes','note','remarks','matrecd','mat recd'),
+        'Status':   status,
+        'Mat Notes':get('mat notes','matnotes','material notes'),
+      };
+    }).filter(Boolean).filter(r=>r['Item Desc']);
+
+    showImportPreview();
+  }catch(e){
+    toast('Error reading Excel: '+e.message, true);
+    console.error(e);
+  }
+}
+
+function showImportPreview(){
+  const preview = document.getElementById('importPreview');
+  const list    = document.getElementById('previewList');
+  const count   = document.getElementById('importCount');
+  if(!_importRows.length){toast('No valid job rows found',true);return;}
+  count.textContent = `${_importRows.length} jobs found — review before importing:`;
+  list.innerHTML = _importRows.slice(0,8).map(r=>`
+    <div class="preview-row">
+      <div class="item">${r['Item Desc']}</div>
+      <div class="meta">
+        ${r['Customer']?r['Customer']+' · ':''}
+        ${r['Qty']?'×'+r['Qty']+' · ':''}
+        ${r['NBD']?'Due: '+r['NBD']+' · ':''}
+        <span style="color:var(--ind);font-weight:700;">${r['Status']}</span>
+      </div>
+    </div>`).join('') + (_importRows.length>8?`<div style="text-align:center;font-size:.72rem;color:var(--text2);padding:6px;">...and ${_importRows.length-8} more</div>`:'');
+  preview.classList.add('show');
+}
+
+async function confirmImport(){
+  if(!_importRows.length) return;
+  toast(`Importing ${_importRows.length} jobs...`);
+  let added=0;
+  for(const job of _importRows){
+    // Skip if already in DB (match by Item Desc)
+    if(DB.jobs.find(j=>j['Item Desc']===job['Item Desc'])) continue;
+    DB.jobs.push(job);
+    await push('addJob', job);
+    added++;
+  }
+  clearImport();
+  renderJobs(); renderKanban();
+  toast(`✓ ${added} jobs imported! (${_importRows.length-added} already existed)`);
+  // Switch to jobs tab
+  document.querySelector('.ntab').click();
+}
+
+function clearImport(){
+  _importRows=[];
+  document.getElementById('importPreview').classList.remove('show');
+  document.getElementById('xlsxInput').value='';
+}
+
+// ── INIT ───────────────────────────────────────
+window.onload=()=>{
+  $('fNBD').value=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+  renderAll();
+  if(API) sync();
+};
+</script>
+</body>
+</html>

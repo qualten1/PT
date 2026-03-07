@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ProdTrack — Owner Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f0f4fa;--white:#fff;--border:#e2e8f0;--text:#1a2236;--text2:#6b7a99;--text3:#b8c4d8;
+  --ind:#6366f1;--ind-l:#eef0ff;--grn:#10b981;--grn-l:#ecfdf5;--red:#ef4444;--red-l:#fef2f2;
+  --gold:#f59e0b;--gold-l:#fffbeb;--sky:#0ea5e9;--sky-l:#f0f9ff;--vio:#8b5cf6;--vio-l:#f5f3ff;
+  --teal:#14b8a6;--teal-l:#f0fdfa;--orange:#f97316;--orange-l:#fff7ed;
+  --shadow:0 1px 4px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);}
+::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+/* HEADER */
+.hdr{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 6px rgba(0,0,0,.05);}
+.logo{font-size:1rem;font-weight:800;color:var(--ind);}
+.logo span{color:var(--text2);font-weight:500;font-size:.8rem;margin-left:6px;}
+.hdr-r{display:flex;align-items:center;gap:12px;}
+.hdr-date{font-size:.78rem;color:var(--text2);}
+#lastSync{font-size:.72rem;color:var(--text3);}
+.rbtn{display:flex;align-items:center;gap:5px;background:var(--ind-l);border:1px solid rgba(99,102,241,.2);
+  border-radius:7px;padding:5px 11px;color:var(--ind);font-size:.73rem;font-weight:700;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;border:none;}
+.rbtn:hover{background:rgba(99,102,241,.15);}
+.rdot{width:6px;height:6px;border-radius:50%;background:var(--grn);}
+.rdot.spin{background:var(--gold);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* LAYOUT */
+.wrap{max-width:1400px;margin:0 auto;padding:20px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.g32{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
+.full{grid-column:1/-1;}
+@media(max-width:900px){.g2,.g3,.g4,.g32{grid-template-columns:1fr;}}
+
+/* KPI CARDS */
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px 20px;
+  box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi.ind::before{background:var(--ind);}
+.kpi.grn::before{background:var(--grn);}
+.kpi.gold::before{background:var(--gold);}
+.kpi.red::before{background:var(--red);}
+.kpi.sky::before{background:var(--sky);}
+.kpi.vio::before{background:var(--vio);}
+.kpi.teal::before{background:var(--teal);}
+.kpi.orange::before{background:var(--orange);}
+.kpi-label{font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px;}
+.kpi-val{font-size:2rem;font-weight:800;line-height:1;margin-bottom:4px;}
+.kpi-sub{font-size:.72rem;color:var(--text2);}
+.kpi-icon{position:absolute;right:16px;top:16px;font-size:1.6rem;opacity:.15;}
+.kpi-badge{display:inline-block;font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:4px;}
+.up{background:var(--grn-l);color:var(--grn);}
+.down{background:var(--red-l);color:var(--red);}
+.warn{background:var(--gold-l);color:var(--gold);}
+
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow);}
+.chdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.ctitle{font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);}
+.chart-wrap{position:relative;height:220px;}
+.chart-wrap-sm{position:relative;height:180px;}
+
+/* ALERTS */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:10px;border:1px solid;margin-bottom:8px;font-size:.82rem;}
+.alert:last-child{margin-bottom:0;}
+.alert.red{background:var(--red-l);border-color:rgba(239,68,68,.2);color:#991b1b;}
+.alert.gold{background:var(--gold-l);border-color:rgba(245,158,11,.2);color:#92400e;}
+.alert.grn{background:var(--grn-l);border-color:rgba(16,185,129,.2);color:#065f46;}
+.alert.sky{background:var(--sky-l);border-color:rgba(14,165,233,.2);color:#0c4a6e;}
+.alert-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+.alert-body{flex:1;}
+.alert-title{font-weight:700;margin-bottom:2px;}
+.alert-detail{font-size:.75rem;opacity:.8;}
+
+/* TABLE */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.8rem;}
+th{text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(99,102,241,.02);}
+
+/* BADGES */
+.sb{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:700;}
+.s-p  {background:var(--gold-l);color:var(--gold);}
+.s-mo {background:var(--sky-l);color:var(--sky);}
+.s-mr {background:var(--teal-l);color:var(--teal);}
+.s-ip {background:var(--ind-l);color:var(--ind);}
+.s-st {background:var(--red-l);color:var(--red);}
+.s-c  {background:var(--grn-l);color:var(--grn);}
+.s-d  {background:var(--vio-l);color:var(--vio);}
+
+/* DUE CHIPS */
+.dc{font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;}
+.dc-ok  {background:var(--grn-l);color:var(--grn);}
+.dc-warn{background:var(--gold-l);color:var(--gold);}
+.dc-late{background:var(--red-l);color:var(--red);}
+
+/* PROGRESS BAR */
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.prog-row:last-child{margin-bottom:0;}
+.prog-label{font-size:.78rem;font-weight:600;min-width:80px;}
+.prog-bar-wrap{flex:1;background:var(--bg);border-radius:20px;height:8px;overflow:hidden;}
+.prog-bar{height:100%;border-radius:20px;transition:width .5s;}
+.prog-val{font-size:.75rem;font-weight:700;min-width:30px;text-align:right;}
+
+/* OPERATOR CARDS */
+.op-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.op-card{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+.op-card.active{border-color:var(--grn);background:var(--grn-l);}
+.op-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:1rem;font-weight:800;margin:0 auto 7px;color:#fff;}
+.op-name{font-size:.78rem;font-weight:700;}
+.op-hrs{font-size:.68rem;color:var(--text2);margin-top:2px;}
+
+/* MISC */
+.empty{text-align:center;color:var(--text3);padding:24px;font-size:.8rem;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.section-title{font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <div class="logo">⚙️ ProdTrack <span>Owner Dashboard</span></div>
+  </div>
+  <div class="hdr-r">
+    <div class="hdr-date" id="hdrDate">—</div>
+    <div id="lastSync">—</div>
+    <button class="rbtn" onclick="loadData()"><div class="rdot" id="rdot"></div> Refresh</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- KPI ROW -->
+  <div class="g4" style="margin-bottom:16px;">
+    <div class="kpi ind">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-label">Active Jobs</div>
+      <div class="kpi-val" id="kpiActive">—</div>
+      <div class="kpi-sub" id="kpiActiveSub">in production</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-icon">🔴</div>
+      <div class="kpi-label">Overdue</div>
+      <div class="kpi-val" id="kpiOverdue">—</div>
+      <div class="kpi-sub" id="kpiOverdueSub">past NBD</div>
+    </div>
+    <div class="kpi gold">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Due This Week</div>
+      <div class="kpi-val" id="kpiWeek">—</div>
+      <div class="kpi-sub">next 7 days</div>
+    </div>
+    <div class="kpi grn">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-label">Delivered</div>
+      <div class="kpi-val" id="kpiDone">—</div>
+      <div class="kpi-sub" id="kpiDoneSub">total completed</div>
+    </div>
+  </div>
+
+  <div class="g4" style="margin-bottom:20px;">
+    <div class="kpi sky">
+      <div class="kpi-icon">⏱</div>
+      <div class="kpi-label">Logs Today</div>
+      <div class="kpi-val" id="kpiLogsToday">—</div>
+      <div class="kpi-sub">time entries</div>
+    </div>
+    <div class="kpi teal">
+      <div class="kpi-icon">👷</div>
+      <div class="kpi-label">Active Operators</div>
+      <div class="kpi-val" id="kpiOps">—</div>
+      <div class="kpi-sub">logged today</div>
+    </div>
+    <div class="kpi orange">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label">Awaiting Material</div>
+      <div class="kpi-val" id="kpiMat">—</div>
+      <div class="kpi-sub">pending/ordered</div>
+    </div>
+    <div class="kpi vio">
+      <div class="kpi-icon">🚫</div>
+      <div class="kpi-label">Stuck</div>
+      <div class="kpi-val" id="kpiStuck">—</div>
+      <div class="kpi-sub" id="kpiStuckSub">need attention</div>
+    </div>
+  </div>
+
+  <!-- ALERTS + STATUS PIPELINE -->
+  <div class="g32" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="chdr"><div class="ctitle">⚠ Alerts & Actions Needed</div></div>
+      <div id="alertsList"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="card">
+      <div class="chdr"><div class="ctitle">Pipeline Summary</div></div>
+      <div id="pipelineList"></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW -->
+  <div class="g2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="chdr"><div class="ctitle">Jobs by Status</div></div>
+      <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="chdr"><div class="ctitle">Daily Output — Last 14 Days</div></div>
+      <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- DELIVERY TABLE + OPERATOR WORKLOAD -->
+  <div class="g32" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="chdr">
+        <div class="ctitle">Delivery Status — All Active Jobs</div>
+        <div style="display:flex;gap:6px;">
+          <select id="delivFilter" onchange="renderDelivery()" style="font-size:.72rem;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;">
+            <option value="all">All</option>
+            <option value="late">Overdue only</option>
+            <option value="week">Due this week</option>
+            <option value="active">Active only</option>
+          </select>
+        </div>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Item / DRG</th><th>Customer</th><th>Qty</th><th>NBD</th><th>Status</th><th>Days Left</th></tr></thead>
+          <tbody id="delivTbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chdr"><div class="ctitle">Operator Workload Today</div></div>
+      <div id="opWorkload"></div>
+    </div>
+  </div>
+
+  <!-- RECENT TIMINGS -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="chdr">
+      <div class="ctitle">Recent Time Logs</div>
+      <span style="font-size:.72rem;color:var(--text2);" id="logsCount">—</span>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Date</th><th>Operator</th><th>Item / DRG</th><th>Operation</th><th>Start</th><th>End</th><th>Qty</th><th>Total Time</th><th>Per Piece</th></tr></thead>
+        <tbody id="recentLogs"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQbVu0cTeEAKytfbafCogToCW-R53XBMcZrE2Zz3dE/exec';
+
+let DB = { jobs:[], timeLogs:[] };
+let charts = {};
+
+// ── UTILS ──────────────────────────────────────
+function fd(d){
+  if(!d) return '—';
+  try{
+    const s = String(d);
+    // Handle DD/MM/YYYY format from sheet
+    if(s.includes('/') && s.split('/').length === 3){
+      const [dd,mm,yy] = s.split('/');
+      return new Date(`${yy}-${mm}-${dd}`).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+    }
+    return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});
+  }catch{return d;}
+}
+function daysLeft(d){
+  if(!d) return null;
+  try{
+    const s = String(d);
+    let dt;
+    if(s.includes('/') && s.split('/').length === 3){
+      const [dd,mm,yy] = s.split('/');
+      dt = new Date(`${yy}-${mm}-${dd}T00:00:00`);
+    } else {
+      dt = new Date(s+'T00:00:00');
+    }
+    return Math.ceil((dt - new Date()) / 86400000);
+  }catch{return null;}
+}
+function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function sbadge(s){
+  const map={
+    'Pending':'s-p','Material Ordered':'s-mo','Material Received':'s-mr',
+    'In Process':'s-ip','Stuck':'s-st','Completed':'s-c','Delivered':'s-d'
+  };
+  return `<span class="sb ${map[s]||''}">${s||'—'}</span>`;
+}
+function dueChip(d){
+  const n=daysLeft(d);
+  if(n===null) return '—';
+  if(n<0)  return `<span class="dc dc-late">${Math.abs(n)}d LATE</span>`;
+  if(n<=7) return `<span class="dc dc-warn">${n===0?'TODAY':n+'d'}</span>`;
+  return `<span class="dc dc-ok">${n}d</span>`;
+}
+function avatarColor(name){
+  const colors=['#6366f1','#10b981','#f59e0b','#ef4444','#0ea5e9','#8b5cf6','#f97316','#14b8a6','#ec4899','#84cc16'];
+  let h=0; for(let c of (name||'?')) h+=c.charCodeAt(0);
+  return colors[h % colors.length];
+}
+
+// ── LOAD ───────────────────────────────────────
+async function loadData(){
+  const dot = document.getElementById('rdot');
+  dot.className = 'rdot spin';
+  try{
+    const r = await fetch(API+'?action=getAll');
+    const d = await r.json();
+    if(d.jobs)     DB.jobs     = d.jobs;
+    if(d.timeLogs) DB.timeLogs = d.timeLogs;
+    dot.className = 'rdot';
+    dot.style.background = 'var(--grn)';
+    document.getElementById('lastSync').textContent = 'Synced ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    renderAll();
+  }catch(e){
+    dot.className = 'rdot';
+    dot.style.background = 'var(--red)';
+    document.getElementById('lastSync').textContent = 'Sync failed';
+    console.error(e);
+  }
+}
+
+function renderAll(){
+  renderKPIs();
+  renderAlerts();
+  renderPipeline();
+  renderCharts();
+  renderDelivery();
+  renderOperators();
+  renderRecentLogs();
+}
+
+// ── KPIs ───────────────────────────────────────
+function renderKPIs(){
+  const jobs = DB.jobs;
+  const logs = DB.timeLogs;
+  const today = todayStr();
+
+  const active   = jobs.filter(j=>!['Delivered','Completed'].includes(j['Status']||'')).length;
+  const overdue  = jobs.filter(j=>{const n=daysLeft(j['NBD']);return n!==null&&n<0&&!['Delivered','Completed'].includes(j['Status']||'');}).length;
+  const week     = jobs.filter(j=>{const n=daysLeft(j['NBD']);return n!==null&&n>=0&&n<=7&&!['Delivered','Completed'].includes(j['Status']||'');}).length;
+  const done     = jobs.filter(j=>['Delivered','Completed'].includes(j['Status']||'')).length;
+  const stuck    = jobs.filter(j=>j['Status']==='Stuck').length;
+  const mat      = jobs.filter(j=>['Pending','Material Ordered'].includes(j['Status']||'')).length;
+  const todayLogs= logs.filter(l=>l['DATE']===today);
+  const activeOps= new Set(todayLogs.map(l=>l['OPERATOR'])).size;
+
+  document.getElementById('kpiActive').textContent   = active;
+  document.getElementById('kpiOverdue').textContent  = overdue;
+  document.getElementById('kpiWeek').textContent     = week;
+  document.getElementById('kpiDone').textContent     = done;
+  document.getElementById('kpiLogsToday').textContent= todayLogs.length;
+  document.getElementById('kpiOps').textContent      = activeOps;
+  document.getElementById('kpiMat').textContent      = mat;
+  document.getElementById('kpiStuck').textContent    = stuck;
+
+  document.getElementById('kpiOverdueSub').textContent = overdue>0 ? '⚠ needs action' : 'all on track';
+  document.getElementById('kpiStuckSub').textContent   = stuck>0   ? '⚠ check now'    : 'none stuck';
+}
+
+// ── ALERTS ─────────────────────────────────────
+function renderAlerts(){
+  const el = document.getElementById('alertsList');
+  const alerts = [];
+  const jobs = DB.jobs;
+
+  // Overdue jobs
+  jobs.filter(j=>{const n=daysLeft(j['NBD']);return n!==null&&n<0&&!['Delivered','Completed'].includes(j['Status']||'');})
+    .forEach(j=>{
+      alerts.push({type:'red',icon:'🚨',title:`OVERDUE: ${j['Item Desc']||'—'}`,
+        detail:`${j['Customer']||'—'} · ${Math.abs(daysLeft(j['NBD']))}d past due · Status: ${j['Status']||'—'}`});
+    });
+
+  // Stuck jobs
+  jobs.filter(j=>j['Status']==='Stuck').forEach(j=>{
+    alerts.push({type:'red',icon:'🔴',title:`STUCK: ${j['Item Desc']||'—'}`,
+      detail:`${j['Customer']||'—'} · ${j['Notes']||j['Mat Notes']||'No reason given'}`});
+  });
+
+  // Due in ≤3 days
+  jobs.filter(j=>{const n=daysLeft(j['NBD']);return n!==null&&n>=0&&n<=3&&!['Delivered','Completed'].includes(j['Status']||'');})
+    .forEach(j=>{
+      const n = daysLeft(j['NBD']);
+      alerts.push({type:'gold',icon:'⏰',title:`Due ${n===0?'TODAY':n+'d'}: ${j['Item Desc']||'—'}`,
+        detail:`${j['Customer']||'—'} · Status: ${j['Status']||'—'} · ×${j['Qty']||'?'} pcs`});
+    });
+
+  // Material waiting
+  jobs.filter(j=>j['Status']==='Material Ordered').forEach(j=>{
+    alerts.push({type:'sky',icon:'📦',title:`Awaiting Material: ${j['Item Desc']||'—'}`,
+      detail:j['Mat Notes']||'Material ordered — follow up with supplier'});
+  });
+
+  if(!alerts.length){
+    el.innerHTML='<div class="alert grn"><div class="alert-icon">✅</div><div class="alert-body"><div class="alert-title">All Clear</div><div class="alert-detail">No overdue jobs, no stuck items. Production running smoothly.</div></div></div>';
+    return;
+  }
+  el.innerHTML = alerts.slice(0,8).map(a=>`
+    <div class="alert ${a.type}">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-body">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-detail">${a.detail}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── PIPELINE ───────────────────────────────────
+function renderPipeline(){
+  const el = document.getElementById('pipelineList');
+  const statuses = [
+    {id:'Pending',          color:'#f59e0b'},
+    {id:'Material Ordered', color:'#0ea5e9'},
+    {id:'Material Received',color:'#14b8a6'},
+    {id:'In Process',       color:'#6366f1'},
+    {id:'Stuck',            color:'#ef4444'},
+    {id:'Completed',        color:'#10b981'},
+    {id:'Delivered',        color:'#8b5cf6'},
+  ];
+  const total = DB.jobs.length || 1;
+  el.innerHTML = statuses.map(s=>{
+    const n = DB.jobs.filter(j=>(j['Status']||'Pending')===s.id).length;
+    const pct = Math.round(n/total*100);
+    return `<div class="prog-row">
+      <div class="prog-label" style="color:${s.color};font-size:.73rem;">${s.id}</div>
+      <div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%;background:${s.color};"></div></div>
+      <div class="prog-val" style="color:${s.color};">${n}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── CHARTS ─────────────────────────────────────
+function renderCharts(){
+  renderStatusChart();
+  renderDailyChart();
+}
+
+function renderStatusChart(){
+  const ctx = document.getElementById('statusChart').getContext('2d');
+  if(charts.status) charts.status.destroy();
+  const statuses = ['Pending','Material Ordered','Material Received','In Process','Stuck','Completed','Delivered'];
+  const colors   = ['#f59e0b','#0ea5e9','#14b8a6','#6366f1','#ef4444','#10b981','#8b5cf6'];
+  const counts   = statuses.map(s=>DB.jobs.filter(j=>(j['Status']||'Pending')===s).length);
+  charts.status = new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:statuses,datasets:[{data:counts,backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11,family:'Plus Jakarta Sans'},boxWidth:12,padding:10}}}}
+  });
+}
+
+function renderDailyChart(){
+  const ctx = document.getElementById('dailyChart').getContext('2d');
+  if(charts.daily) charts.daily.destroy();
+
+  // Build last 14 days
+  const days=[];
+  for(let i=13;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    days.push(d.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}));
+  }
+  const counts = days.map(day=>DB.timeLogs.filter(l=>l['DATE']===day).length);
+  const labels = days.map(d=>{const p=d.split('/');return p[0]+'/'+p[1];});
+
+  charts.daily = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{label:'Time Entries',data:counts,backgroundColor:'rgba(99,102,241,.7)',borderRadius:6,borderSkipped:false}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10}}},
+        y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},stepSize:1},beginAtZero:true}
+      }
+    }
+  });
+}
+
+// ── DELIVERY TABLE ─────────────────────────────
+function renderDelivery(){
+  const tbody = document.getElementById('delivTbody');
+  const filter = document.getElementById('delivFilter')?.value || 'all';
+  let jobs = [...DB.jobs];
+
+  if(filter==='late')   jobs=jobs.filter(j=>{const n=daysLeft(j['NBD']);return n!==null&&n<0&&!['Delivered','Completed'].includes(j['Status']||'');});
+  else if(filter==='week') jobs=jobs.filter(j=>{const n=daysLeft(j['NBD']);return n!==null&&n>=0&&n<=7;});
+  else if(filter==='active') jobs=jobs.filter(j=>!['Delivered','Completed'].includes(j['Status']||''));
+
+  // Sort by days left ascending (overdue first)
+  jobs.sort((a,b)=>(daysLeft(a['NBD'])??9999)-(daysLeft(b['NBD'])??9999));
+
+  if(!jobs.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No jobs match this filter</td></tr>';return;}
+  tbody.innerHTML = jobs.map(j=>`
+    <tr>
+      <td style="font-weight:700;font-size:.82rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${j['Item Desc']||''}">${j['Item Desc']||'—'}</td>
+      <td style="font-size:.78rem;color:var(--text2);">${j['Customer']||'—'}</td>
+      <td class="mono" style="font-size:.75rem;">${j['Qty']||'—'}</td>
+      <td style="font-size:.75rem;">${fd(j['NBD'])}</td>
+      <td>${sbadge(j['Status']||'Pending')}</td>
+      <td>${dueChip(j['NBD'])}</td>
+    </tr>`).join('');
+}
+
+// ── OPERATOR WORKLOAD ──────────────────────────
+function renderOperators(){
+  const el = document.getElementById('opWorkload');
+  const today = todayStr();
+  const todayLogs = DB.timeLogs.filter(l=>l['DATE']===today);
+
+  // Group by operator
+  const opMap = {};
+  todayLogs.forEach(l=>{
+    const op = l['OPERATOR']||'Unknown';
+    if(!opMap[op]) opMap[op]={name:op,entries:0,items:new Set()};
+    opMap[op].entries++;
+    if(l['DRG NUMBER']) opMap[op].items.add(l['DRG NUMBER']);
+  });
+
+  const ops = Object.values(opMap);
+  if(!ops.length){
+    el.innerHTML='<div class="empty">No time entries today yet</div>';
+    return;
+  }
+  el.innerHTML='<div class="op-grid">'+ops.map(o=>`
+    <div class="op-card active">
+      <div class="op-avatar" style="background:${avatarColor(o.name)};">${o.name.charAt(0).toUpperCase()}</div>
+      <div class="op-name">${o.name}</div>
+      <div class="op-hrs">${o.entries} log${o.entries!==1?'s':''} · ${o.items.size} item${o.items.size!==1?'s':''}</div>
+    </div>`).join('')+'</div>';
+}
+
+// ── RECENT LOGS ────────────────────────────────
+function renderRecentLogs(){
+  const tbody = document.getElementById('recentLogs');
+  const logs = [...DB.timeLogs]
+    .sort((a,b)=>String(b['DATE']).localeCompare(String(a['DATE'])))
+    .slice(0,20);
+  document.getElementById('logsCount').textContent = `${DB.timeLogs.length} total entries`;
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="9" class="empty">No time logs yet</td></tr>';return;}
+  tbody.innerHTML = logs.map(l=>`
+    <tr>
+      <td class="mono" style="font-size:.73rem;white-space:nowrap;">${l['DATE']||'—'}</td>
+      <td style="font-weight:700;">${l['OPERATOR']||'—'}</td>
+      <td style="font-size:.77rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${l['DRG NUMBER']||''}">${l['DRG NUMBER']||'—'}</td>
+      <td style="font-size:.75rem;color:var(--text2);">${l['OPERATION']||'—'}</td>
+      <td class="mono" style="font-size:.73rem;">${l['START TIME']||'—'}</td>
+      <td class="mono" style="font-size:.73rem;">${l['END TIME']||'—'}</td>
+      <td class="mono" style="font-size:.73rem;">${l['QUANTITY']||'—'}</td>
+      <td class="mono" style="font-weight:700;color:var(--ind);">${l['TOTAL TIME']||'—'}</td>
+      <td class="mono" style="font-size:.73rem;color:var(--grn);">${l['TIME PER PIECE']||'—'}</td>
+    </tr>`).join('');
+}
+
+// ── CLOCK + INIT ───────────────────────────────
+function updateDate(){
+  document.getElementById('hdrDate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+
+window.onload = () => {
+  updateDate();
+  setInterval(updateDate, 60000);
+  loadData();
+  setInterval(loadData, 60000); // auto-refresh every minute
+};
+</script>
+</body>
+</html>
