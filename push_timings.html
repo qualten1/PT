@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><title>Push Timings Data</title></head>
+<body>
+<h2>Pushing 26 timing rows to Google Sheet...</h2>
+<div id="log" style="font-family:monospace;font-size:12px;white-space:pre;"></div>
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQbVu0cTeEAKytfbafCogToCW-R53XBMcZrE2Zz3dE/exec';
+
+const rows = [
+  ['Mahesh','GPF201 (SCREW)','THREADING','09:00','17:45',10,'23/04/2025','','08:45','00:52'],
+  ['HARSHAD','70-434486','FINAL TURNING','10:45','13:40',1,'23/04/2025','','02:55','02:55'],
+  ['HARSHAD','GPF201 (wheel)','FINAL TURNING','14:11','17:02',11,'23/04/2025','','02:51','00:15'],
+  ['Vishnu','REF000040320010000 (2)','FINAL TURNING','10:30','17:39',2,'23/04/2025','','07:09','03:34'],
+  ['BHAVESH','GPF204','Drilling','09:00','11:10',6,'22/04/2025','','02:10','00:21'],
+  ['BHAVESH','GPF204','Drilling','12:40','16:07',37,'22/04/2025','','03:27','00:05'],
+  ['BHAVESH','SSFTE004N200F00000','CHEMFER','17:10','17:28',7,'22/04/2025','','00:18','00:02'],
+  ['Vishnu','GPF204 (BODY THREADING)','THREADING','09:06','15:05',6,'22/04/2025','','05:59','00:59'],
+  ['Vikram','0804-DPEQ000016','FIRST SIDE','08:40','17:40',140,'22/04/2025','','09:00','00:03'],
+  ['Mahesh','GPF204 (body threading)','FINAL TURNING','09:00','17:30',14,'21/04/2025','','08:30','00:36'],
+  ['HARSHAD','1704-8019-0180','ROUGHING','11:00','16:30',1,'21/04/2025','','05:30','05:30'],
+  ['HARSHAD','GPF204','CHEMFER','09:00','11:00',20,'21/04/2025','','02:00','00:06'],
+  ['BHAVESH','Shantilala Sq Pipe Drill Dia 20x180','Drilling','09:00','17:41',24,'21/04/2025','','08:41','00:21'],
+  ['BHAVESH','Shantilala Sq Pipe Drill Dia 20x180','Drilling','12:35','18:00',12,'21/04/2025','','05:25','00:27'],
+  ['BHAVESH','GPF204','Drilling','09:00','12:00',6,'21/04/2025','','03:00','00:30'],
+  ['HARSHAD','Dp vulcan','FINAL MACHINING','17:00','18:00',1,'21/04/2025','','01:00','01:00'],
+  ['Vishnu','SSFTE004N200F00000','FINAL TURNING','09:15','17:54',2,'21/04/2025','','08:39','04:19'],
+  ['Vikram','0804-DPEQ000016','FINAL TURNING','08:40','16:30',83,'21/04/2025','','07:50','00:05'],
+  ['Vikram','0804-DPEQ000016','FINAL TURNING','16:30','17:50',15,'21/04/2025','','01:20','00:05'],
+  ['Mahesh','GPF204 (body threading)','FINAL TURNING','09:00','17:00',14,'19/04/2025','','08:00','00:34'],
+  ['Pratap','0804-DPEQ000016','CNC TURNING','11:00','17:20',86,'17/04/2025','','06:20','00:04'],
+  ['BHAVESH','CP-D22-01285-PBL','TAPPING','12:45','18:00',70,'17/04/2025','','05:15','00:04'],
+  ['BHAVESH','GPF204','TAPPING','09:00','12:00',25,'17/04/2025','','03:00','00:07'],
+  ['Mahesh','GPF204 (SCREW)','FINAL TURNING','09:00','18:00',8,'16/04/2025','','09:00','01:07'],
+  ['Pratap','CP-D22-01285-PBL(DIA 47)','VMC DRILLING','09:20','14:30',89,'16/04/2025','','05:10','00:03'],
+  ['Pratap','0804-SBF001070330000000','VMC MILLING','14:45','15:55',1,'16/04/2025','','01:10','01:10'],
+];
+
+const log = document.getElementById('log');
+const keys = ['OPERATOR','DRG NUMBER','OPERATION','START TIME','END TIME','QUANTITY','DATE','REMARKS','TOTAL TIME','TIME PER PIECE'];
+
+async function pushAll() {
+  let ok=0, fail=0;
+  for (let i=0; i<rows.length; i++) {
+    const row = rows[i];
+    const payload = {action:'addLog'};
+    keys.forEach((k,j) => payload[k] = row[j]);
+    try {
+      await fetch(API, {method:'POST', body:JSON.stringify(payload)});
+      ok++;
+      log.textContent += `✅ ${i+1}/${rows.length} — ${row[0]} | ${row[1]} | ${row[2]}\n`;
+    } catch(e) {
+      fail++;
+      log.textContent += `❌ ${i+1} FAILED — ${e.message}\n`;
+    }
+    await new Promise(r=>setTimeout(r,300)); // small delay to avoid quota
+  }
+  log.textContent += `\n✅ Done! ${ok} pushed, ${fail} failed.\nYou can close this page.`;
+}
+pushAll();
+</script>
+</body>
+</html>
