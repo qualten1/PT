@@ -180,7 +180,7 @@ tr:hover td{background:rgba(99,102,241,.02);}
       <div class="kpi-icon">⏱</div>
       <div class="kpi-label">Logs Today</div>
       <div class="kpi-val" id="kpiLogsToday">—</div>
-      <div class="kpi-sub">time entries</div>
+      <div class="kpi-sub" id="kpiPiecesToday">time entries</div>
     </div>
     <div class="kpi teal">
       <div class="kpi-icon">👷</div>
@@ -223,6 +223,21 @@ tr:hover td{background:rgba(99,102,241,.02);}
     <div class="card">
       <div class="chdr"><div class="ctitle">Daily Output — Last 14 Days</div></div>
       <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+    </div>
+  </div>
+
+
+  <!-- ACTUAL VS ESTIMATED -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="chdr">
+      <div class="ctitle">⏱ Actual vs Estimated — Per Piece by Item</div>
+      <span style="font-size:.72rem;color:var(--text2);">Based on all time logs · 🟢 under est · 🔴 over est · 🟡 no est set</span>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Item / DRG</th><th>Operation</th><th>Runs</th><th>Avg /pc</th><th>Best /pc</th><th>Est /pc</th><th>Variance</th></tr></thead>
+        <tbody id="estTbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -274,6 +289,18 @@ const API = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQ
 
 let DB = { jobs:[], timeLogs:[] };
 let charts = {};
+
+
+// ── Time helpers ─────────────────────────────────────────────
+function timeToMins(t){
+  if(!t) return 0;
+  const p=String(t).split(':');
+  return p.length>=2 ? parseInt(p[0]||0)*60+parseInt(p[1]||0) : 0;
+}
+function minsToHHMM(m){
+  if(!m||isNaN(m)||m<=0) return '—';
+  return Math.floor(m/60).toString().padStart(2,'0')+':'+Math.round(m%60).toString().padStart(2,'0');
+}
 
 // ── UTILS ──────────────────────────────────────
 function fd(d){
@@ -349,6 +376,7 @@ function renderAll(){
   renderAlerts();
   renderPipeline();
   renderCharts();
+  renderEstTable();
   renderDelivery();
   renderOperators();
   renderRecentLogs();
@@ -373,7 +401,9 @@ function renderKPIs(){
   document.getElementById('kpiOverdue').textContent  = overdue;
   document.getElementById('kpiWeek').textContent     = week;
   document.getElementById('kpiDone').textContent     = done;
+  const piecesToday = todayLogs.reduce((s,l)=>s+(parseInt(l['QUANTITY'])||0),0);
   document.getElementById('kpiLogsToday').textContent= todayLogs.length;
+  document.getElementById('kpiPiecesToday').textContent = piecesToday ? piecesToday+' pieces made' : 'time entries';
   document.getElementById('kpiOps').textContent      = activeOps;
   document.getElementById('kpiMat').textContent      = mat;
   document.getElementById('kpiStuck').textContent    = stuck;
@@ -500,6 +530,67 @@ function renderDailyChart(){
       }
     }
   });
+}
+
+
+// ── ACTUAL VS ESTIMATED TABLE ──────────────────────────────
+function renderEstTable(){
+  const tbody = document.getElementById('estTbody');
+  if(!tbody) return;
+
+  // Build per-item, per-operation summary
+  const summary = {};
+  DB.timeLogs.forEach(l=>{
+    const item = (l['DRG NUMBER']||'').trim();
+    const op   = (l['OPERATION']||'').trim();
+    if(!item||!op) return;
+    const key  = item+'||'+op;
+    if(!summary[key]) summary[key]={item,op,perPcMins:[],runs:0};
+    summary[key].runs++;
+    const pc = timeToMins(l['TIME PER PIECE']);
+    if(pc>0) summary[key].perPcMins.push(pc);
+  });
+
+  // Get est times from jobs
+  const estMap = {};
+  DB.jobs.forEach(j=>{
+    try{
+      if(j['Est Times']){
+        const ests = JSON.parse(j['Est Times']);
+        Object.entries(ests).forEach(([op,t])=>{
+          estMap[(j['Item Desc']||'').trim()+'||'+op.trim()] = timeToMins(t);
+        });
+      }
+    }catch(e){}
+  });
+
+  const rows = Object.values(summary).sort((a,b)=>a.item.localeCompare(b.item));
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">No time logs yet</td></tr>';return;}
+
+  tbody.innerHTML = rows.map(r=>{
+    const pcs  = r.perPcMins.filter(x=>x>0);
+    const avg  = pcs.length ? Math.round(pcs.reduce((a,b)=>a+b,0)/pcs.length) : null;
+    const best = pcs.length ? Math.min(...pcs) : null;
+    const est  = estMap[r.item+'||'+r.op] || null;
+    const diff = (avg&&est) ? avg-est : null;
+
+    let varCell = '<span style="color:#ccc;">—</span>';
+    if(diff!==null){
+      if(diff>2)       varCell=`<span style="background:var(--red-l);color:var(--red);font-weight:700;padding:2px 7px;border-radius:4px;font-size:.75rem;">+${minsToHHMM(Math.abs(diff))} over</span>`;
+      else if(diff<-2) varCell=`<span style="background:var(--grn-l);color:var(--grn);font-weight:700;padding:2px 7px;border-radius:4px;font-size:.75rem;">${minsToHHMM(Math.abs(diff))} under</span>`;
+      else             varCell=`<span style="background:var(--grn-l);color:var(--grn);font-weight:700;padding:2px 7px;border-radius:4px;font-size:.75rem;">✓ on target</span>`;
+    }
+
+    return `<tr>
+      <td style="font-weight:700;font-size:.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.item}">${r.item}</td>
+      <td style="font-size:.78rem;color:var(--text2);">${r.op}</td>
+      <td class="mono" style="font-size:.75rem;">${r.runs}</td>
+      <td class="mono" style="font-weight:700;color:var(--ind);">${avg?minsToHHMM(avg):'—'}</td>
+      <td class="mono" style="font-weight:700;color:var(--grn);">${best?minsToHHMM(best):'—'}</td>
+      <td class="mono" style="color:var(--gold);">${est?minsToHHMM(est):'<span style="color:#ccc;">not set</span>'}</td>
+      <td>${varCell}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── DELIVERY TABLE ─────────────────────────────
