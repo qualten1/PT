@@ -599,6 +599,61 @@ body::before {
   margin-top: 3px;
 }
 
+
+/* ── SUPERVISOR PANEL ─────────────────────────── */
+#screen-supervisor {
+  display:none;
+  min-height:100vh;
+  background:var(--bg, #060c10);
+  padding:0 0 40px;
+}
+.sup-hdr {
+  background:linear-gradient(135deg,#1a2236,#0d1526);
+  border-bottom:1px solid rgba(255,255,255,.07);
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.sup-logo { font-size:.95rem;font-weight:800;color:#f59e0b;letter-spacing:-.3px; }
+.sup-sub  { font-size:.72rem;color:rgba(255,255,255,.4);margin-top:1px; }
+.sup-sync { font-size:.65rem;color:rgba(255,255,255,.3);margin-top:2px; }
+
+.sup-tabs { display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.07);background:#0d1526; }
+.sup-tab  { flex:1;padding:11px 6px;text-align:center;font-size:.72rem;font-weight:700;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s; }
+.sup-tab.active { color:#f59e0b;border-bottom-color:#f59e0b; }
+
+.sup-page { display:none;padding:16px; }
+.sup-page.active { display:block; }
+
+.sup-card { background:#0d1526;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px;margin-bottom:12px; }
+.sup-card-title { font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:10px; }
+
+.sup-job { background:#101a2e;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:11px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }
+.sup-job-name { font-weight:700;font-size:.85rem;color:#e0e8ff; }
+.sup-job-meta { font-size:.7rem;color:rgba(255,255,255,.4); }
+.sup-status-sel { background:#1a2744;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e0e8ff;font-size:.72rem;padding:4px 8px;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer; }
+
+.sup-inp { width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#e0e8ff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;outline:none;margin-bottom:8px;box-sizing:border-box; }
+.sup-inp:focus { border-color:#f59e0b; }
+.sup-sel { width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.1);background:#101a2e;color:#e0e8ff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;outline:none;margin-bottom:8px;box-sizing:border-box;cursor:pointer; }
+.sup-btn { width:100%;padding:13px;border-radius:10px;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:.88rem;font-weight:800;cursor:pointer;letter-spacing:.5px;margin-top:4px; }
+.sup-btn-gold { background:#f59e0b;color:#1a0a00; }
+.sup-btn-grn  { background:#10b981;color:#fff; }
+.sup-btn-red  { background:#ef4444;color:#fff; }
+
+.sup-log-row { background:#101a2e;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:.75rem;color:#b0b8d0; }
+.sup-log-op { font-weight:700;color:#f59e0b;font-size:.8rem; }
+
+.sb-p  {background:rgba(245,158,11,.15);color:#f59e0b;}
+.sb-mo {background:rgba(14,165,233,.15);color:#38bdf8;}
+.sb-mr {background:rgba(20,184,166,.15);color:#2dd4bf;}
+.sb-ip {background:rgba(99,102,241,.15);color:#818cf8;}
+.sb-st {background:rgba(239,68,68,.15);color:#f87171;}
+.sb-c  {background:rgba(16,185,129,.15);color:#34d399;}
+.sb-d  {background:rgba(139,92,246,.15);color:#a78bfa;}
+
 </style>
 </head>
 <body>
@@ -732,6 +787,14 @@ body::before {
         </button>
       </div>
 
+      <!-- Quantity done input -->
+      <div class="remarks-wrap show" id="qtyWrap" style="margin-top:8px;">
+        <div class="sec-label">Pieces Completed <span style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.8rem;">કેટલા ભાગ બન્યા</span></div>
+        <input id="qtyDoneInput" type="number" min="1"
+          style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid rgba(57,255,159,.3);background:rgba(57,255,159,.07);color:#e0ffe8;font-size:1.1rem;font-weight:700;font-family:'JetBrains Mono',monospace;outline:none;"
+          placeholder="Enter quantity you completed">
+      </div>
+
       <!-- DONE button -->
       <div class="btn-area" style="margin-top:8px;">
         <button class="btn-done show" id="btnDone" onclick="confirmDone()">
@@ -748,6 +811,133 @@ body::before {
     </div>
 
   </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SUPERVISOR PANEL — Naresh only                    -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-supervisor">
+
+  <div class="sup-hdr">
+    <div>
+      <div class="sup-logo">⚙️ Supervisor Panel</div>
+      <div class="sup-sub" id="supName">—</div>
+      <div class="sup-sync" id="supSync">—</div>
+    </div>
+    <div style="font-size:1.1rem;color:#f59e0b;">👷‍♂️</div>
+  </div>
+
+  <div class="sup-tabs">
+    <div class="sup-tab active" onclick="supGo('jobs',this)">📋 Jobs</div>
+    <div class="sup-tab" onclick="supGo('logtime',this)">⏱ Log Time</div>
+    <div class="sup-tab" onclick="supGo('addjob',this)">➕ Add Job</div>
+    <div class="sup-tab" onclick="supGo('logs',this)">📜 Logs</div>
+  </div>
+
+  <!-- JOBS TAB -->
+  <div class="sup-page active" id="sup-jobs">
+    <div class="sup-card">
+      <div class="sup-card-title">All Active Jobs — tap status to change</div>
+      <div id="supJobsList"></div>
+    </div>
+  </div>
+
+  <!-- LOG TIME TAB -->
+  <div class="sup-page" id="sup-logtime">
+    <div class="sup-card">
+      <div class="sup-card-title">Log time on behalf of operator</div>
+      <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Operator</label>
+      <select class="sup-sel" id="supOpSel">
+        <option value="">— Select operator —</option>
+        <option value="Mahesh">Mahesh</option>
+        <option value="Vishnu">Vishnu</option>
+        <option value="Harshad">Harshad</option>
+        <option value="Bhavesh">Bhavesh</option>
+        <option value="CNC">CNC</option>
+        <option value="VMC">VMC</option>
+        <option value="Kishan">Kishan</option>
+        <option value="Naresh">Naresh</option>
+        <option value="Helper 1">Helper 1</option>
+        <option value="Helper 2">Helper 2</option>
+      </select>
+
+      <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Job / Item</label>
+      <select class="sup-sel" id="supJobSel">
+        <option value="">— Select job —</option>
+      </select>
+
+      <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Operation</label>
+      <input class="sup-inp" id="supOpName" placeholder="e.g. Final Turning" list="supOpDL">
+      <datalist id="supOpDL">
+        <option value="Final Turning"><option value="Rough Turning"><option value="Threading">
+        <option value="Drilling"><option value="Chamfer"><option value="VMC"><option value="CNC Turning">
+        <option value="Boring"><option value="Grinding"><option value="Inspection"><option value="Packing">
+      </datalist>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Start Time</label>
+          <input class="sup-inp" id="supStart" type="time" style="margin-bottom:0;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">End Time</label>
+          <input class="sup-inp" id="supEnd" type="time" style="margin-bottom:0;">
+        </div>
+      </div>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Qty Done</label>
+          <input class="sup-inp" id="supQty" type="number" min="1" placeholder="e.g. 10" style="margin-bottom:0;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Date</label>
+          <input class="sup-inp" id="supDate" type="date" style="margin-bottom:0;">
+        </div>
+      </div>
+      <input class="sup-inp" id="supRemarks" placeholder="Remarks (optional)" style="margin-top:8px;">
+      <button class="sup-btn sup-btn-gold" onclick="supLogTime()">✓ Submit Time Log</button>
+    </div>
+  </div>
+
+  <!-- ADD JOB TAB -->
+  <div class="sup-page" id="sup-addjob">
+    <div class="sup-card">
+      <div class="sup-card-title">Add new job to system</div>
+      <input class="sup-inp" id="sajItem" placeholder="Item / DRG Number *">
+      <input class="sup-inp" id="sajCust" placeholder="Customer">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input class="sup-inp" id="sajPO"  placeholder="PO No" style="margin-bottom:0;">
+        <input class="sup-inp" id="sajQty" type="number" placeholder="Qty" style="margin-bottom:0;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">NBD (Due Date)</label>
+          <input class="sup-inp" id="sajNBD" type="date" style="margin-bottom:0;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Status</label>
+          <select class="sup-sel" id="sajStatus" style="margin-bottom:0;">
+            <option>Pending</option>
+            <option>Material Ordered</option>
+            <option>Material Received</option>
+            <option>In Process</option>
+          </select>
+        </div>
+      </div>
+      <input class="sup-inp" id="sajNotes" placeholder="Notes" style="margin-top:8px;">
+      <button class="sup-btn sup-btn-grn" onclick="supAddJob()" style="margin-top:8px;">+ Add Job</button>
+    </div>
+  </div>
+
+  <!-- LOGS TAB -->
+  <div class="sup-page" id="sup-logs">
+    <div class="sup-card">
+      <div class="sup-card-title">Recent time logs</div>
+      <div id="supLogsList"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Confirm start overlay -->
@@ -784,7 +974,7 @@ body::before {
 // URL token (?op=TOKEN).
 // ═══════════════════════════════════════════
 
-const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQbVu0cTeEAKytfbafCogToCW-R53XBMcZrE2Zz3dE/exec';
+const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbz3C3lVIwqQ_lhFK2rIdl8sFkXn4VuMqtBQ5am7cRN_KCfQPGvY0z7Kogo2dHuJYhgS/exec';
 
 const OPERATORS = {
   'MAH1A': { name:'Mahesh',   nameGuj:'મહેશ'   },
@@ -794,7 +984,7 @@ const OPERATORS = {
   'CNC5E': { name:'CNC',      nameGuj:'સી.એન.સી.' },
   'VMC6F': { name:'VMC',      nameGuj:'વી.એમ.સી.' },
   'KIS7G': { name:'Kishan',   nameGuj:'કિશન'   },
-  'NAR8H': { name:'Naresh',   nameGuj:'નરેશ'   },
+  'NAR8H': { name:'Naresh',   nameGuj:'નરેશ', supervisor:true },
   'HLP9I': { name:'Helper 1', nameGuj:'હેલ્પર ૧' },
   'HLP0J': { name:'Helper 2', nameGuj:'હેલ્પર ૨' },
   'DEMO':  { name:'Demo',     nameGuj:'ડેમો'   },
@@ -842,6 +1032,14 @@ window.onload = async () => {
   const resolvedToken = token || 'DEMO';
   const op = OPERATORS[resolvedToken];
 
+  // Supervisor — load sheet and open supervisor panel
+  if (op && op.supervisor) {
+    hide('screen-loading');
+    await loadSheetData();
+    showSupervisor(op);
+    return;
+  }
+
   if (!op) {
     hide('screen-loading');
     show('screen-invalid');
@@ -882,6 +1080,157 @@ window.onload = async () => {
   populateJobDropdown();
   renderTodayLog();
 };
+
+// ══════════════════════════════════════════════════════════
+// SUPERVISOR MODE
+// ══════════════════════════════════════════════════════════
+let SUP_JOBS = [], SUP_LOGS = [];
+
+function showSupervisor(op) {
+  show('screen-supervisor');
+  document.getElementById('supName').textContent = op.name + ' — Supervisor';
+  const td = new Date().toISOString().split('T')[0];
+  const ds = document.getElementById('supDate'); if(ds) ds.value = td;
+  const sajNBD = document.getElementById('sajNBD'); if(sajNBD) sajNBD.value = td;
+  renderSupJobs();
+  renderSupLogs();
+}
+
+async function loadSheetData() {
+  try {
+    const r = await fetch(SHEET_API_URL + '?action=getAll');
+    const d = await r.json();
+    SUP_JOBS = d.jobs || [];
+    SUP_LOGS = d.timeLogs || [];
+    const sel = document.getElementById('supJobSel');
+    if(sel) {
+      sel.innerHTML = '<option value="">— Select job —</option>';
+      SUP_JOBS.filter(j=>!['Delivered','Completed'].includes(j['Status']||'')).forEach(j=>{
+        const o = document.createElement('option');
+        o.value = j['Item Desc']||'';
+        o.textContent = (j['PO No']?j['PO No']+' — ':'')+(j['Item Desc']||'')+(j['Qty']?' ×'+j['Qty']:'');
+        sel.appendChild(o);
+      });
+    }
+    document.getElementById('supSync').textContent = 'Synced '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    document.getElementById('supSync').textContent = 'Sync failed';
+  }
+}
+
+function supGo(tab, el) {
+  document.querySelectorAll('.sup-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sup-page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sup-'+tab).classList.add('active');
+  if(tab==='jobs') renderSupJobs();
+  if(tab==='logs') renderSupLogs();
+}
+
+function supBadge(s){
+  const map={'Pending':'sb-p','Material Ordered':'sb-mo','Material Received':'sb-mr','In Process':'sb-ip','Stuck':'sb-st','Completed':'sb-c','Delivered':'sb-d'};
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:700;" class="${map[s]||''}">${s||'—'}</span>`;
+}
+
+function renderSupJobs() {
+  const el = document.getElementById('supJobsList'); if(!el) return;
+  const active = SUP_JOBS.filter(j=>!['Delivered'].includes(j['Status']||''));
+  if(!active.length){el.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:.8rem;text-align:center;padding:16px;">No active jobs</div>';return;}
+  el.innerHTML = active.map(j=>{
+    const item = j['Item Desc']||'—';
+    const nbd  = j['NBD']||'';
+    const statusOpts = ['Pending','Material Ordered','Material Received','In Process','Stuck','Completed','Delivered']
+      .map(s=>`<option${s===(j['Status']||'Pending')?' selected':''}>${s}</option>`).join('');
+    return `<div class="sup-job">
+      <div>
+        <div class="sup-job-name">${item}</div>
+        <div class="sup-job-meta">${j['Customer']||''} ${j['Qty']?'· ×'+j['Qty']:''} ${nbd?'· Due: '+nbd:''}</div>
+      </div>
+      <select class="sup-status-sel" onchange="supChangeStatus('${item.replace(/'/g,"\\'")}',this.value)">${statusOpts}</select>
+    </div>`;
+  }).join('');
+}
+
+function supChangeStatus(item, status) {
+  fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify({action:'updateStatus',item,status})})
+    .then(()=>{
+      const j=SUP_JOBS.find(j=>j['Item Desc']===item); if(j) j['Status']=status;
+      supToast('✓ Status updated: '+status);
+      renderSupJobs();
+    }).catch(()=>supToast('❌ Update failed',true));
+}
+
+function supLogTime() {
+  const op     = document.getElementById('supOpSel')?.value.trim();
+  const job    = document.getElementById('supJobSel')?.value.trim();
+  const opName = document.getElementById('supOpName')?.value.trim();
+  const start  = document.getElementById('supStart')?.value;
+  const end    = document.getElementById('supEnd')?.value;
+  const qty    = parseInt(document.getElementById('supQty')?.value)||1;
+  const date   = document.getElementById('supDate')?.value;
+  const rmks   = document.getElementById('supRemarks')?.value.trim();
+  if(!op||!job||!opName||!start||!end){supToast('⚠ Fill all required fields',true);return;}
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  const totalMins=(eh*60+em)-(sh*60+sm);
+  if(totalMins<=0){supToast('⚠ End time must be after start',true);return;}
+  const totalStr=Math.floor(totalMins/60).toString().padStart(2,'0')+':'+(totalMins%60).toString().padStart(2,'0');
+  const perPcMins=totalMins/qty;
+  const perPcStr=Math.floor(perPcMins/60).toString().padStart(2,'0')+':'+Math.round(perPcMins%60).toString().padStart(2,'0');
+  const dateStr=date?new Date(date).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}):new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const log={action:'addLog','OPERATOR':op,'DRG NUMBER':job,'OPERATION':opName,'START TIME':start,'END TIME':end,'QUANTITY':qty,'DATE':dateStr,'REMARKS':rmks||'(logged by supervisor)','TOTAL TIME':totalStr,'TIME PER PIECE':perPcStr};
+  fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify(log)})
+    .then(()=>{
+      SUP_LOGS.unshift(log);
+      supToast('✓ Time logged for '+op);
+      ['supOpName','supStart','supEnd','supRemarks'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('supQty').value='';
+    }).catch(()=>supToast('❌ Log failed',true));
+}
+
+function supAddJob() {
+  const item=document.getElementById('sajItem')?.value.trim();
+  if(!item){supToast('⚠ Item name required',true);return;}
+  const job={action:'addJob','PO No':document.getElementById('sajPO')?.value.trim()||'','Customer':document.getElementById('sajCust')?.value.trim()||'','Item Desc':item,'Qty':document.getElementById('sajQty')?.value||'','NBD':document.getElementById('sajNBD')?.value||'','Status':document.getElementById('sajStatus')?.value||'Pending','Notes':document.getElementById('sajNotes')?.value.trim()||'','PO Date':'','Price':'','Mat Notes':'','Est Times':'','Lathe':'','Machine':''};
+  fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify(job)})
+    .then(()=>{
+      SUP_JOBS.unshift(job);
+      supToast('✓ Job added: '+item);
+      ['sajItem','sajCust','sajPO','sajQty','sajNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('sajStatus').value='Pending';
+    }).catch(()=>supToast('❌ Failed to add job',true));
+}
+
+function renderSupLogs() {
+  const el=document.getElementById('supLogsList'); if(!el) return;
+  const recent=SUP_LOGS.slice(0,20);
+  if(!recent.length){el.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:.8rem;text-align:center;padding:16px;">No logs yet</div>';return;}
+  el.innerHTML=recent.map(l=>`
+    <div class="sup-log-row">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+        <span class="sup-log-op">${l['OPERATOR']||'—'}</span>
+        <span style="color:rgba(255,255,255,.3);font-size:.68rem;">${l['DATE']||'—'}</span>
+      </div>
+      <div style="font-weight:600;color:#e0e8ff;font-size:.78rem;">${l['DRG NUMBER']||'—'} · ${l['OPERATION']||'—'}</div>
+      <div style="display:flex;gap:12px;margin-top:3px;font-family:'JetBrains Mono',monospace;font-size:.7rem;">
+        <span style="color:#f59e0b;">${l['START TIME']||'—'}→${l['END TIME']||'—'}</span>
+        <span style="color:#10b981;">${l['TOTAL TIME']||'—'}</span>
+        <span style="color:#818cf8;">${l['TIME PER PIECE']||'—'}/pc</span>
+        <span style="color:rgba(255,255,255,.35);">×${l['QUANTITY']||'?'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function supToast(msg,err=false){
+  let t=document.getElementById('t');
+  if(!t){t=document.createElement('div');t.id='t';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${err?'#ef4444':'#10b981'};color:#fff;padding:10px 20px;border-radius:10px;font-size:.82rem;font-weight:700;z-index:9999;display:block;`;
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+// Auto-refresh sheet data every 2 min for supervisor
+setInterval(()=>{ if(document.getElementById('screen-supervisor')?.classList.contains('active')) loadSheetData(); },120000);
 
 // ═══════════════════════════════════════════
 // CLOCK
@@ -1284,7 +1633,7 @@ function doDone() {
     const dateStr   = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
     const totalMins = Math.round(hrs * 60);
     const totalStr  = Math.floor(totalMins/60).toString().padStart(2,'0') + ':' + (totalMins%60).toString().padStart(2,'0');
-    const qty       = parseInt(job['Qty'] || job.qty) || 1;
+    const qty       = parseInt(document.getElementById('qtyDoneInput')?.value) || parseInt(job['Qty'] || job.qty) || 1;
     const perPcMins = totalMins / qty;
     const perPcStr  = Math.floor(perPcMins/60).toString().padStart(2,'0') + ':' + Math.round(perPcMins%60).toString().padStart(2,'0');
     const sheetLog  = {
@@ -1319,6 +1668,7 @@ function doDone() {
   document.getElementById('btnPause').classList.remove('show');
   document.getElementById('pausedBanner').classList.remove('show');
   document.getElementById('remarksInput').value = '';
+  const qi = document.getElementById('qtyDoneInput'); if(qi) qi.value = '';
 
   renderTodayLog();
   // Reload jobs from sheet to reflect completed op

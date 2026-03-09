@@ -130,6 +130,19 @@ tr:hover td{background:rgba(99,102,241,.02);}
 .empty{text-align:center;color:var(--text3);padding:24px;font-size:.8rem;}
 .mono{font-family:'JetBrains Mono',monospace;}
 .section-title{font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;}
+
+.mach-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.mach-sm-card{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);}
+.mach-sm-card.overloaded{border-color:var(--red);}
+.mach-sm-card.high{border-color:var(--gold);}
+.mach-sm-card.ok{border-color:var(--grn);}
+.fc-mini{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.fc-mini-day{border-radius:6px;padding:5px 3px;text-align:center;background:var(--bg);border:1px solid var(--border);}
+.fc-mini-day.today{border-color:var(--ind);background:var(--ind-l);}
+.fc-mini-label{font-size:.55rem;font-weight:700;color:var(--text2);}
+.fc-mini-bar-wrap{height:40px;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;margin:3px 0;}
+.fc-mini-seg{border-radius:2px;min-height:2px;}
+
 </style>
 </head>
 <body>
@@ -141,6 +154,7 @@ tr:hover td{background:rgba(99,102,241,.02);}
   <div class="hdr-r">
     <div class="hdr-date" id="hdrDate">—</div>
     <div id="lastSync">—</div>
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;background:#f4f6fb;border:1px solid #e2e8f0;border-radius:7px;padding:5px 11px;color:#6b7a99;font-size:.73rem;font-weight:700;text-decoration:none;">⚙️ Admin</a>
     <button class="rbtn" onclick="loadData()"><div class="rdot" id="rdot"></div> Refresh</button>
   </div>
 </header>
@@ -268,6 +282,25 @@ tr:hover td{background:rgba(99,102,241,.02);}
     </div>
   </div>
 
+
+  <!-- MACHINE LOAD SUMMARY -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="chdr">
+      <div class="ctitle">🏭 Machine Load — Today</div>
+      <span style="font-size:.72rem;color:var(--text2);">Based on active jobs with estimates set</span>
+    </div>
+    <div class="mach-summary-grid" id="dashMachGrid"></div>
+  </div>
+
+  <!-- 7-DAY FORECAST MINI -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="chdr">
+      <div class="ctitle">📅 7-Day Workload Forecast</div>
+      <span style="font-size:.72rem;color:var(--text2);">🟢 &lt;60% · 🟡 60–90% · 🔴 &gt;90%</span>
+    </div>
+    <div class="fc-mini" id="dashFcGrid"></div>
+  </div>
+
   <!-- RECENT TIMINGS -->
   <div class="card" style="margin-bottom:16px;">
     <div class="chdr">
@@ -285,7 +318,7 @@ tr:hover td{background:rgba(99,102,241,.02);}
 </div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQbVu0cTeEAKytfbafCogToCW-R53XBMcZrE2Zz3dE/exec';
+const API = 'https://script.google.com/macros/s/AKfycbz3C3lVIwqQ_lhFK2rIdl8sFkXn4VuMqtBQ5am7cRN_KCfQPGvY0z7Kogo2dHuJYhgS/exec';
 
 let DB = { jobs:[], timeLogs:[] };
 let charts = {};
@@ -350,6 +383,91 @@ function avatarColor(name){
   return colors[h % colors.length];
 }
 
+
+// ── MACHINES CONFIG (mirrors admin) ────────────────────────
+const MACHINES = [
+  { id:'lathe_big1',  name:'Lathe Big 1',        group:'lathe', hrsPerDay:8,  color:'#6366f1' },
+  { id:'lathe_big2',  name:'Lathe Big 2',        group:'lathe', hrsPerDay:8,  color:'#818cf8' },
+  { id:'lathe_med3',  name:'Lathe Med 3',        group:'lathe', hrsPerDay:8,  color:'#4f46e5' },
+  { id:'lathe_med4',  name:'Lathe Med 4',        group:'lathe', hrsPerDay:8,  color:'#7c3aed' },
+  { id:'lathe_med5',  name:'Lathe Med 5',        group:'lathe', hrsPerDay:8,  color:'#9333ea' },
+  { id:'lathe_sm6',   name:'Lathe Small 6',      group:'lathe', hrsPerDay:8,  color:'#a855f7' },
+  { id:'lathe_sm7',   name:'Lathe Small 7',      group:'lathe', hrsPerDay:8,  color:'#c084fc' },
+  { id:'cnc',         name:'CNC Turning',        group:'cnc',   hrsPerDay:8,  color:'#0ea5e9' },
+  { id:'vmc',         name:'VMC',                group:'vmc',   hrsPerDay:8,  color:'#8b5cf6' },
+  { id:'drilling',    name:'Drilling',           group:'drill', hrsPerDay:8,  color:'#f59e0b' },
+  { id:'inspection',  name:'Inspection / QC',    group:'qc',    hrsPerDay:8,  color:'#10b981' },
+  { id:'packing',     name:'Packing & Assembly', group:'pack',  hrsPerDay:8,  color:'#f97316' },
+];
+
+const LOAD_STATUSES = ['Material Received','In Process','Stuck'];
+
+function daysAheadColor(days){
+  if(days < 5)  return { color:'#ef4444', label:'🔴 Idle soon',    bg:'#fef2f2' };
+  if(days < 8)  return { color:'#f97316', label:'🟠 Getting low',  bg:'#fff7ed' };
+  if(days < 10) return { color:'#f59e0b', label:'🟡 OK',           bg:'#fffbeb' };
+  if(days < 15) return { color:'#10b981', label:'🟢 Healthy',      bg:'#ecfdf5' };
+  return              { color:'#0ea5e9', label:'🔵 Very busy',    bg:'#f0f9ff' };
+}
+
+function detectMachine(opName, assignedLathe){
+  const op=(opName||'').toLowerCase();
+  if(op.includes('vmc'))   return 'vmc';
+  if(op.includes('cnc'))   return 'cnc';
+  if(op.includes('drill')) return 'drilling';
+  if(op.includes('inspect')||op.includes('qc')||op.includes('quality')) return 'inspection';
+  if(op.includes('pack')||op.includes('assembl')) return 'packing';
+  if(op.includes('lathe')||op.includes('turning')||op.includes('roughing')||op.includes('rough')||op.includes('threading')||op.includes('thread')||op.includes('chamfer')||op.includes('boring')||op.includes('tapping')||op.includes('first side')||op.includes('final machining')) {
+    return assignedLathe || 'lathe_big1';
+  }
+  return assignedLathe || null;
+}
+
+function calcMachineLoad(){
+  const load={};
+  MACHINES.forEach(m=>{ load[m.id]={queuedHrs:0,daysAhead:0,jobs:[]}; });
+  const activeJobs=DB.jobs.filter(j=>LOAD_STATUSES.includes(j['Status']||''));
+  activeJobs.forEach(j=>{
+    const item=j['Item Desc']||'';
+    const qty=parseInt(j['Qty'])||1;
+    const assignedLathe=j['Lathe']||j['Machine']||null;
+    let estTimes={};
+    try{ if(j['Est Times']) estTimes=JSON.parse(j['Est Times']); }catch(e){}
+    Object.entries(estTimes).forEach(([op,pcTime])=>{
+      const machId=detectMachine(op,assignedLathe);
+      if(!machId||!load[machId]) return;
+      const pcMins=timeToMins(pcTime);
+      const totalHrs=(pcMins*qty)/60;
+      load[machId].queuedHrs+=totalHrs;
+      load[machId].jobs.push({item,op,qty,totalHrs,nbd:j['NBD']});
+    });
+  });
+  MACHINES.forEach(m=>{ load[m.id].daysAhead=m.hrsPerDay>0?Math.round((load[m.id].queuedHrs/m.hrsPerDay)*10)/10:0; });
+  return load;
+}
+
+function getWorkingDays(n){
+  const days=[];
+  let d=new Date(); d.setHours(0,0,0,0);
+  while(days.length<n){ if(d.getDay()!==0) days.push(new Date(d)); d.setDate(d.getDate()+1); }
+  return days;
+}
+
+function calcForecast(load){
+  const days=getWorkingDays(7);
+  const forecast=days.map(d=>{ const dl={}; MACHINES.forEach(m=>dl[m.id]=0); return {date:d,dayLoad:dl}; });
+  MACHINES.forEach(m=>{
+    (load[m.id]||{jobs:[]}).jobs.forEach(job=>{
+      let nbdDate=null;
+      if(job.nbd){ try{ const p=String(job.nbd).split('/'); nbdDate=p.length===3?new Date(`${p[2]}-${p[1]}-${p[0]}T00:00:00`):new Date(job.nbd+'T00:00:00'); }catch(e){} }
+      const rel=nbdDate?forecast.filter(fd=>fd.date<=nbdDate):forecast;
+      const spread=rel.length||1;
+      rel.forEach(fd=>fd.dayLoad[m.id]+=job.totalHrs/spread);
+    });
+  });
+  return forecast;
+}
+
 // ── LOAD ───────────────────────────────────────
 async function loadData(){
   const dot = document.getElementById('rdot');
@@ -376,6 +494,7 @@ function renderAll(){
   renderAlerts();
   renderPipeline();
   renderCharts();
+  renderMachSummary();
   renderEstTable();
   renderDelivery();
   renderOperators();
@@ -410,6 +529,63 @@ function renderKPIs(){
 
   document.getElementById('kpiOverdueSub').textContent = overdue>0 ? '⚠ needs action' : 'all on track';
   document.getElementById('kpiStuckSub').textContent   = stuck>0   ? '⚠ check now'    : 'none stuck';
+}
+
+
+// ── MACHINE SUMMARY (dashboard) ────────────────────────────
+function renderMachSummary(){
+  const load     = calcMachineLoad();
+  const forecast = calcForecast(load);
+  renderDashMachGrid(load);
+  renderDashForecast(forecast);
+}
+
+function renderDashMachGrid(load){
+  const el=document.getElementById('dashMachGrid'); if(!el) return;
+  el.innerHTML=MACHINES.map(m=>{
+    const l=load[m.id]||{queuedHrs:0,daysAhead:0,jobs:[]};
+    const days=l.daysAhead;
+    const dc=daysAheadColor(days);
+    const barPct=Math.min(Math.round((days/15)*100),100);
+    return `<div class="mach-sm-card" style="border-color:${dc.color};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <div style="font-weight:700;font-size:.78rem;color:${m.color};">${m.name}</div>
+        <div style="text-align:right;">
+          <div style="font-size:1rem;font-weight:800;color:${dc.color};line-height:1;">${days.toFixed(1)}</div>
+          <div style="font-size:.55rem;color:${dc.color};font-weight:700;">DAYS</div>
+        </div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:5px;">
+        <div style="height:100%;width:${barPct}%;background:${dc.color};border-radius:10px;"></div>
+      </div>
+      <div style="font-size:.68rem;color:${dc.color};font-weight:600;">${dc.label}</div>
+      <div style="font-size:.65rem;color:var(--text2);margin-top:2px;">${l.queuedHrs.toFixed(1)}h · ${l.jobs.length} job${l.jobs.length!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDashForecast(forecast){
+  const el=document.getElementById('dashFcGrid'); if(!el) return;
+  const today=new Date(); today.setHours(0,0,0,0);
+  el.innerHTML=forecast.map(fd=>{
+    const isToday=fd.date.getTime()===today.getTime();
+    const dayName=fd.date.toLocaleDateString('en-IN',{weekday:'short'});
+    const dayDate=fd.date.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    const segs=MACHINES.map(m=>{
+      const pct=Math.min(Math.round((fd.dayLoad[m.id]||0)/m.hrsPerDay*100),100);
+      const col=pct>=90?'#ef4444':pct>=60?'#f59e0b':m.color;
+      const h=Math.round(pct*0.36); // max 36px height
+      return pct>0?`<div class="fc-mini-seg" style="height:${Math.max(h,3)}px;background:${col};"></div>`:'';
+    }).join('');
+    const maxPct=Math.max(...MACHINES.map(m=>Math.round((fd.dayLoad[m.id]||0)/m.hrsPerDay*100)));
+    const dayCol=maxPct>=90?'#ef4444':maxPct>=60?'#f59e0b':'#10b981';
+    return `<div class="fc-mini-day${isToday?' today':''}">
+      <div class="fc-mini-label">${dayName}</div>
+      <div style="font-size:.6rem;color:var(--text2);">${dayDate}</div>
+      <div class="fc-mini-bar-wrap">${segs||'<div style="height:3px;background:var(--border);border-radius:2px;"></div>'}</div>
+      <div style="font-size:.62rem;font-weight:700;color:${dayCol};">${maxPct}%</div>
+    </div>`;
+  }).join('');
 }
 
 // ── ALERTS ─────────────────────────────────────

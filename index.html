@@ -160,6 +160,37 @@ tr:hover td{background:rgba(99,102,241,.02);}
 .est-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px;}
 .est-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
 
+
+/* MACHINE LOAD */
+.mach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px;}
+.mach-card{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow);}
+.mach-card.overloaded{border-color:var(--red);background:var(--red-l);}
+.mach-card.high{border-color:var(--gold);}
+.mach-card.ok{border-color:var(--grn);}
+.mach-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.mach-name{font-weight:800;font-size:.92rem;}
+.mach-cap{font-size:.7rem;color:var(--text2);}
+.mach-load-bar{height:10px;background:var(--border);border-radius:20px;overflow:hidden;margin-bottom:8px;}
+.mach-load-fill{height:100%;border-radius:20px;transition:width .5s;}
+.mach-stats{display:flex;gap:14px;margin-bottom:10px;}
+.mach-stat{text-align:center;}
+.mach-stat-val{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:.9rem;}
+.mach-stat-lbl{font-size:.58rem;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;}
+.mach-jobs{max-height:120px;overflow-y:auto;}
+.mach-job{font-size:.73rem;padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;}
+.mach-job:last-child{border-bottom:none;}
+
+/* FORECAST */
+.fc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px;}
+.fc-day{border-radius:10px;padding:8px 6px;text-align:center;border:1.5px solid var(--border);background:var(--white);}
+.fc-day.today{border-color:var(--ind);background:var(--ind-l);}
+.fc-day-name{font-size:.62rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;}
+.fc-day-date{font-size:.75rem;font-weight:800;margin:2px 0 6px;}
+.fc-machine-row{font-size:.58rem;display:flex;justify-content:space-between;padding:2px 0;}
+.fc-machine-row .fc-bar{flex:1;height:5px;background:var(--border);border-radius:3px;margin:0 4px;overflow:hidden;align-self:center;}
+.fc-machine-row .fc-bar-fill{height:100%;border-radius:3px;}
+.fc-pct{font-size:.58rem;font-weight:700;min-width:28px;text-align:right;}
+
 </style>
 </head>
 <body>
@@ -172,7 +203,9 @@ tr:hover td{background:rgba(99,102,241,.02);}
   <button class="ntab" onclick="go('history',this)">📚 History</button>
   <button class="ntab" onclick="go('operators',this)">👷 Operators</button>
   <button class="ntab" onclick="go('import',this)">📥 Import Excel</button>
+  <button class="ntab" onclick="go('machines',this)">🏭 Machines</button>
   <div class="nav-r">
+    <a href="dashboard.html" target="_blank" style="display:flex;align-items:center;gap:5px;background:var(--ind-l);border:1px solid rgba(99,102,241,.2);border-radius:7px;padding:5px 11px;color:var(--ind);font-size:.73rem;font-weight:700;text-decoration:none;white-space:nowrap;">📊 Dashboard</a>
     <button class="sbtn" onclick="sync()"><div class="sdot" id="sdot"></div><span id="slbl">Sync</span></button>
     <div id="clock">—</div>
   </div>
@@ -229,6 +262,32 @@ tr:hover td{background:rgba(99,102,241,.02);}
             </select>
           </div>
           <div><label>Mat Notes</label><input id="fMatNotes" placeholder="50 recd 25-Apr"></div>
+        </div>
+        <div class="fg fg-2" style="margin-bottom:10px;">
+          <div>
+            <label>Lathe Assignment <span style="font-size:.65rem;color:var(--text2);font-weight:400;">(for lathe operations)</span></label>
+            <select id="fLathe">
+              <option value="">— Not assigned —</option>
+              <option value="lathe_big1">Lathe Big 1</option>
+              <option value="lathe_big2">Lathe Big 2</option>
+              <option value="lathe_med3">Lathe Med 3</option>
+              <option value="lathe_med4">Lathe Med 4</option>
+              <option value="lathe_med5">Lathe Med 5</option>
+              <option value="lathe_sm6">Lathe Small 6</option>
+              <option value="lathe_sm7">Lathe Small 7</option>
+            </select>
+          </div>
+          <div>
+            <label>Machine Override <span style="font-size:.65rem;color:var(--text2);font-weight:400;">(for CNC/VMC/Drilling)</span></label>
+            <select id="fMachine">
+              <option value="">— Auto detect —</option>
+              <option value="cnc">CNC Turning</option>
+              <option value="vmc">VMC</option>
+              <option value="drilling">Drilling</option>
+              <option value="inspection">Inspection / QC</option>
+              <option value="packing">Packing & Assembly</option>
+            </select>
+          </div>
         </div>
         <div style="margin-bottom:10px;"><label>Notes</label><input id="fNotes" placeholder="Special instructions..."></div>
         <button class="btn bp bfull" onclick="addJob()">+ ADD JOB</button>
@@ -369,6 +428,51 @@ tr:hover td{background:rgba(99,102,241,.02);}
   </div>
 </div>
 
+
+<!-- ═══ MACHINES ═══ -->
+<div class="page" id="pg-machines">
+  <h1>🏭 Machine Load & Forecast</h1>
+  <div class="sub">Real-time load based on active jobs and estimated times. Forecast shows next 7 working days.</div>
+
+  <!-- Today's load -->
+  <div style="font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;">TODAY'S MACHINE LOAD</div>
+  <div class="mach-grid" id="machGrid"></div>
+
+  <!-- 7-day forecast -->
+  <div style="font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;">7-DAY WORKLOAD FORECAST</div>
+  <div class="card" style="margin-bottom:16px;">
+    <div style="overflow-x:auto;">
+      <div class="fc-grid" id="fcGrid" style="min-width:560px;"></div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:.7rem;color:var(--text2);">
+      <span>🔴 &lt;5 days — idle soon</span>
+      <span>🟠 5–8 days — getting low</span>
+      <span>🟡 8–10 days — OK</span>
+      <span>🟢 10–15 days — healthy</span>
+      <span>🔵 15+ days — very busy</span>
+    </div>
+  </div>
+
+  <!-- Job → Machine assignment table -->
+  <div style="font-size:.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;">ACTIVE JOBS — MACHINE ASSIGNMENT</div>
+  <div class="card">
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">Item / DRG</th>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">Customer</th>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">Qty</th>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">NBD</th>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">Operations & Machines</th>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">Est Hours</th>
+          <th style="text-align:left;padding:8px 10px;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);">Days to NBD</th>
+        </tr></thead>
+        <tbody id="machJobTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="mbg" id="jmodal">
   <div class="modal">
     <div class="mtitle"><span id="jmtitle">—</span><button class="mx" onclick="cm('jmodal')">×</button></div>
@@ -391,7 +495,7 @@ tr:hover td{background:rgba(99,102,241,.02);}
 // ═══════════════════════════════════════════════
 // CONFIG — your Apps Script URL is already here
 // ═══════════════════════════════════════════════
-const API = 'https://script.google.com/macros/s/AKfycbxU_dFA5rhY6K5LJ3xcoyfGDPGQbVu0cTeEAKytfbafCogToCW-R53XBMcZrE2Zz3dE/exec';
+const API = 'https://script.google.com/macros/s/AKfycbz3C3lVIwqQ_lhFK2rIdl8sFkXn4VuMqtBQ5am7cRN_KCfQPGvY0z7Kogo2dHuJYhgS/exec';
 const SITE = window.location.href.replace(/index\.html.*$|\/$/,'');
 
 const STATUSES = [
@@ -466,6 +570,7 @@ function renderAll(){
   if(curTab==='kanban')    renderKanban();
   if(curTab==='timings')   renderTimings();
   if(curTab==='history')   renderHistory();
+  if(curTab==='machines')  renderMachines();
   if(curTab==='operators') renderOps();
 }
 
@@ -485,11 +590,13 @@ function addJob(){
     'Notes':     $('fNotes').value.trim(),
     'Status':    $('fStatus').value,
     'Mat Notes': $('fMatNotes').value.trim(),
+    'Lathe':     $('fLathe')?.value || '',
+    'Machine':   $('fMachine')?.value || '',
     'Est Times': estData ? JSON.stringify(estData) : '',
   };
   DB.jobs.unshift(job);
   push('addJob',job);
-  ['fPO','fPODate','fCust','fItem','fQty','fPrice','fNBD','fNotes','fMatNotes'].forEach(id=>{$(id).value='';});
+  ['fPO','fPODate','fCust','fItem','fQty','fPrice','fNBD','fNotes','fMatNotes'].forEach(id=>{$(id).value='';}); if($('fLathe'))$('fLathe').value=''; if($('fMachine'))$('fMachine').value='';
   $('fStatus').value='Pending';
   closeSug();
   clearEstRows();
@@ -1035,6 +1142,307 @@ function clearImport(){
   document.getElementById('importPreview').classList.remove('show');
   document.getElementById('xlsxInput').value='';
 }
+
+
+// ═══════════════════════════════════════════════════════════
+// MACHINE LOAD ENGINE
+// ═══════════════════════════════════════════════════════════
+
+const MACHINES = [
+  { id:'lathe_big1',  name:'Lathe Big 1',        group:'lathe', hrsPerDay:8,  color:'#6366f1' },
+  { id:'lathe_big2',  name:'Lathe Big 2',        group:'lathe', hrsPerDay:8,  color:'#818cf8' },
+  { id:'lathe_med3',  name:'Lathe Med 3',        group:'lathe', hrsPerDay:8,  color:'#4f46e5' },
+  { id:'lathe_med4',  name:'Lathe Med 4',        group:'lathe', hrsPerDay:8,  color:'#7c3aed' },
+  { id:'lathe_med5',  name:'Lathe Med 5',        group:'lathe', hrsPerDay:8,  color:'#9333ea' },
+  { id:'lathe_sm6',   name:'Lathe Small 6',      group:'lathe', hrsPerDay:8,  color:'#a855f7' },
+  { id:'lathe_sm7',   name:'Lathe Small 7',      group:'lathe', hrsPerDay:8,  color:'#c084fc' },
+  { id:'cnc',         name:'CNC Turning',        group:'cnc',   hrsPerDay:8,  color:'#0ea5e9' },
+  { id:'vmc',         name:'VMC',                group:'vmc',   hrsPerDay:8,  color:'#8b5cf6' },
+  { id:'drilling',    name:'Drilling',           group:'drill', hrsPerDay:8,  color:'#f59e0b' },
+  { id:'inspection',  name:'Inspection / QC',    group:'qc',    hrsPerDay:8,  color:'#10b981' },
+  { id:'packing',     name:'Packing & Assembly', group:'pack',  hrsPerDay:8,  color:'#f97316' },
+];
+
+// Statuses that count towards machine load (material must be in workshop)
+const LOAD_STATUSES = ['Material Received','In Process','Stuck'];
+
+// Days-ahead colour thresholds (utilisation: days of work queued)
+function daysAheadColor(days){
+  if(days < 5)  return { color:'#ef4444', label:'🔴 Low — idle soon',    bg:'#fef2f2' };
+  if(days < 8)  return { color:'#f97316', label:'🟠 Getting low',         bg:'#fff7ed' };
+  if(days < 10) return { color:'#f59e0b', label:'🟡 OK',                  bg:'#fffbeb' };
+  if(days < 15) return { color:'#10b981', label:'🟢 Healthy backlog',     bg:'#ecfdf5' };
+  return              { color:'#0ea5e9', label:'🔵 Very busy — monitor', bg:'#f0f9ff' };
+}
+
+// Auto-detect machine from operation name
+function detectMachine(opName, assignedLathe) {
+  const op = (opName||'').toLowerCase();
+  if(op.includes('vmc'))   return 'vmc';
+  if(op.includes('cnc'))   return 'cnc';
+  if(op.includes('drill')) return 'drilling';
+  if(op.includes('inspect')||op.includes('qc')||op.includes('quality')) return 'inspection';
+  if(op.includes('pack')||op.includes('assembl')) return 'packing';
+  // Lathe operations — use admin-assigned lathe if available
+  if(op.includes('lathe')||op.includes('turning')||op.includes('roughing')||op.includes('rough')||op.includes('threading')||op.includes('thread')||op.includes('chamfer')||op.includes('boring')||op.includes('tapping')||op.includes('first side')||op.includes('final machining')) {
+    return assignedLathe || 'lathe_big1'; // default to Big 1 if not assigned
+  }
+  return assignedLathe || null;
+}
+
+// Get machine name by id
+function machName(id){ return (MACHINES.find(m=>m.id===id)||{name:id}).name; }
+
+// Get working days (Mon-Sat) for next N days starting from today
+function getWorkingDays(n) {
+  const days = [];
+  let d = new Date();
+  d.setHours(0,0,0,0);
+  while(days.length < n) {
+    const dow = d.getDay();
+    if(dow !== 0) days.push(new Date(d)); // exclude Sunday
+    d.setDate(d.getDate()+1);
+  }
+  return days;
+}
+
+// Calculate total estimated hours remaining per machine for active jobs
+function calcMachineLoad() {
+  const load = {};
+  MACHINES.forEach(m => { load[m.id] = { queuedHrs:0, daysAhead:0, jobs:[] }; });
+
+  // ONLY count jobs where material is in workshop
+  const activeJobs = DB.jobs.filter(j => LOAD_STATUSES.includes(j['Status']||''));
+
+  activeJobs.forEach(j => {
+    const item        = j['Item Desc'] || '';
+    const qty         = parseInt(j['Qty']) || 1;
+    const assignedLathe = j['Lathe'] || j['Machine'] || null;
+    let estTimes = {};
+    try { if(j['Est Times']) estTimes = JSON.parse(j['Est Times']); } catch(e) {}
+
+    Object.entries(estTimes).forEach(([op, pcTime]) => {
+      const machId = detectMachine(op, assignedLathe);
+      if(!machId || !load[machId]) return;
+      const pcMins   = timeToMins(pcTime);
+      const totalHrs = (pcMins * qty) / 60;
+      load[machId].queuedHrs += totalHrs;
+      load[machId].jobs.push({ item, op, qty, pcTime, totalHrs, nbd: j['NBD'], status: j['Status'] });
+    });
+
+    // Fallback to history if no estimates
+    if(!Object.keys(estTimes).length) {
+      const hist  = buildHistory();
+      const entry = hist[item.toLowerCase()];
+      if(entry) {
+        const opSeen = {};
+        entry.runs.forEach(r => {
+          if(opSeen[r.operation]) return;
+          opSeen[r.operation] = true;
+          const machId = detectMachine(r.operation, assignedLathe);
+          if(!machId || !load[machId]) return;
+          const pcMins   = timeToMins(r.perPc);
+          if(!pcMins) return;
+          const totalHrs = (pcMins * qty) / 60;
+          load[machId].queuedHrs += totalHrs;
+          load[machId].jobs.push({ item, op: r.operation, qty, pcTime: r.perPc, totalHrs, nbd: j['NBD'], status: j['Status'], fromHistory: true });
+        });
+      }
+    }
+  });
+
+  // Calculate days ahead for each machine
+  MACHINES.forEach(m => {
+    load[m.id].daysAhead = m.hrsPerDay > 0
+      ? Math.round((load[m.id].queuedHrs / m.hrsPerDay) * 10) / 10
+      : 0;
+  });
+
+  return load;
+}
+
+// Forecast: spread queued hours across next 7 working days weighted by NBD
+function calcForecast(load) {
+  const days = getWorkingDays(7);
+  const forecast = days.map(d => {
+    const dayLoad = {};
+    MACHINES.forEach(m => dayLoad[m.id] = 0);
+    return { date: d, dayLoad };
+  });
+
+  MACHINES.forEach(m => {
+    const jobs = (load[m.id]||{}).jobs || [];
+    if(!jobs.length) return;
+
+    jobs.forEach(job => {
+      // Find which day this job is due
+      let nbdDate = null;
+      if(job.nbd) {
+        try {
+          const p = String(job.nbd).split('/');
+          if(p.length===3) nbdDate = new Date(`${p[2]}-${p[1]}-${p[0]}T00:00:00`);
+          else nbdDate = new Date(job.nbd+'T00:00:00');
+        } catch(e) {}
+      }
+
+      // Spread hours evenly across days up to NBD (or next 7 days if no NBD)
+      const relevantDays = nbdDate
+        ? forecast.filter(fd => fd.date <= nbdDate)
+        : forecast;
+      const spread = relevantDays.length || 1;
+      const hrsPerDay = job.totalHrs / spread;
+      relevantDays.forEach(fd => fd.dayLoad[m.id] += hrsPerDay);
+    });
+  });
+  return forecast;
+}
+
+// ── RENDER MACHINES ──────────────────────────────────────────
+function renderMachines() {
+  if(curTab !== 'machines') return;
+  const load     = calcMachineLoad();
+  const forecast = calcForecast(load);
+  renderMachGrid(load);
+  renderForecast(forecast);
+  renderMachJobTable(load);
+}
+
+function renderMachGrid(load) {
+  const el = document.getElementById('machGrid'); if(!el) return;
+
+  // Group lathes separately for display
+  const lathes    = MACHINES.filter(m=>m.group==='lathe');
+  const others    = MACHINES.filter(m=>m.group!=='lathe');
+
+  const renderCard = m => {
+    const l       = load[m.id] || { queuedHrs:0, daysAhead:0, jobs:[] };
+    const days    = l.daysAhead;
+    const dc      = daysAheadColor(days);
+    const barPct  = Math.min(Math.round((days/15)*100),100); // 15 days = full bar
+    const jobRows = l.jobs.slice(0,4).map(j=>
+      `<div class="mach-job">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;" title="${j.item}">${j.item}</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+          <span style="font-size:.62rem;color:var(--text2);">${j.op}</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:${m.color};font-weight:700;font-size:.72rem;">${j.totalHrs.toFixed(1)}h</span>
+        </div>
+      </div>`).join('');
+
+    return `<div class="mach-card" style="border-color:${dc.color};background:${dc.bg}20;">
+      <div class="mach-header">
+        <div>
+          <div class="mach-name" style="color:${m.color};">${m.name}</div>
+          <div class="mach-cap">${m.hrsPerDay}h/day · ${dc.label}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:1.5rem;font-weight:800;color:${dc.color};line-height:1;">${days.toFixed(1)}</div>
+          <div style="font-size:.6rem;color:${dc.color};font-weight:700;">DAYS AHEAD</div>
+        </div>
+      </div>
+      <div class="mach-load-bar">
+        <div class="mach-load-fill" style="width:${barPct}%;background:${dc.color};"></div>
+      </div>
+      <div class="mach-stats">
+        <div class="mach-stat">
+          <div class="mach-stat-val" style="color:${dc.color};">${l.queuedHrs.toFixed(1)}h</div>
+          <div class="mach-stat-lbl">Total Queued</div>
+        </div>
+        <div class="mach-stat">
+          <div class="mach-stat-val">${m.hrsPerDay}h</div>
+          <div class="mach-stat-lbl">Per Day</div>
+        </div>
+        <div class="mach-stat">
+          <div class="mach-stat-val">${l.jobs.length}</div>
+          <div class="mach-stat-lbl">Jobs</div>
+        </div>
+      </div>
+      ${jobRows ? `<div class="mach-jobs">${jobRows}${l.jobs.length>4?`<div style="text-align:center;font-size:.65rem;color:var(--text2);padding:4px;">+${l.jobs.length-4} more</div>`:''}</div>` : `<div style="font-size:.73rem;color:var(--text3);text-align:center;padding:8px;">No jobs in queue</div>`}
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div style="grid-column:1/-1;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:-4px;">LATHES</div>
+    ${lathes.map(renderCard).join('')}
+    <div style="grid-column:1/-1;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-top:8px;margin-bottom:-4px;">OTHER MACHINES</div>
+    ${others.map(renderCard).join('')}
+  `;
+}
+
+function renderForecast(forecast) {
+  const el = document.getElementById('fcGrid'); if(!el) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // For each machine, calculate cumulative days-ahead up to each day
+  // This shows: if today is Day 1, by Day 3 how many days of work does each machine have?
+  el.innerHTML = forecast.map((fd,dayIdx) => {
+    const isToday = fd.date.getTime() === today.getTime();
+    const dayName = fd.date.toLocaleDateString('en-IN',{weekday:'short'});
+    const dayDate = fd.date.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+
+    const bars = MACHINES.map(m => {
+      const hrs  = fd.dayLoad[m.id] || 0;
+      const pct  = Math.min(Math.round(hrs/m.hrsPerDay*100),100);
+      // Use days-ahead colour: if machine is >100% on this day it's overloaded
+      const col  = pct>=100?'#ef4444':pct>=80?'#f97316':pct>=60?'#f59e0b':pct>0?m.color:'#e5e9f2';
+      return `<div class="fc-machine-row">
+        <span style="color:var(--text2);min-width:40px;font-size:.54rem;overflow:hidden;white-space:nowrap;">${m.name.replace('Lathe ','').substring(0,5)}</span>
+        <div class="fc-bar"><div class="fc-bar-fill" style="width:${pct}%;background:${col};"></div></div>
+        <span class="fc-pct" style="color:${col};">${pct?pct+'%':'—'}</span>
+      </div>`;
+    }).join('');
+
+    const maxPct = Math.max(...MACHINES.map(m=>Math.round((fd.dayLoad[m.id]||0)/m.hrsPerDay*100)));
+    const dayCol = maxPct>=100?'#ef4444':maxPct>=80?'#f97316':maxPct>=60?'#f59e0b':maxPct>0?'#10b981':'#b8c4d8';
+
+    return `<div class="fc-day${isToday?' today':''}">
+      <div class="fc-day-name">${dayName}</div>
+      <div class="fc-day-date" style="color:${dayCol};font-weight:${isToday?800:600};">${dayDate}</div>
+      ${bars}
+      <div style="font-size:.6rem;font-weight:800;color:${dayCol};margin-top:4px;border-top:1px solid ${dayCol}22;padding-top:3px;">${maxPct?maxPct+'%':'idle'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMachJobTable(load) {
+  const tbody = document.getElementById('machJobTbody'); if(!tbody) return;
+  const activeJobs = DB.jobs.filter(j=>!['Delivered','Completed'].includes(j['Status']||''));
+  if(!activeJobs.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">No active jobs</td></tr>';return;}
+
+  // Build job → machines map from load
+  const jobMachMap = {};
+  MACHINES.forEach(m => {
+    (load[m.id]||{jobs:[]}).jobs.forEach(jb => {
+      if(!jobMachMap[jb.item]) jobMachMap[jb.item]=[];
+      jobMachMap[jb.item].push({...jb, machId:m.id, machName:m.name, color:m.color});
+    });
+  });
+
+  tbody.innerHTML = activeJobs.map(j => {
+    const item = j['Item Desc']||'—';
+    const qty  = j['Qty']||'—';
+    const nbd  = j['NBD']||'';
+    const daysL = daysLeft ? daysLeft(nbd) : null;
+    const machEntries = jobMachMap[item] || [];
+    const totalEstHrs = machEntries.reduce((s,e)=>s+e.totalHrs,0);
+
+    const machBadges = machEntries.length
+      ? machEntries.map(e=>`<span style="background:${e.color}22;color:${e.color};border:1px solid ${e.color}44;border-radius:5px;padding:1px 7px;font-size:.65rem;font-weight:700;margin-right:4px;">${e.op} → ${e.machName} (${e.totalHrs.toFixed(1)}h)</span>`).join('')
+      : `<span style="color:var(--text3);font-size:.72rem;">${LOAD_STATUSES.includes(j['Status']||'')?'No estimates set — add Est Times to job':'⏳ Waiting for material — not counted in load'}</span>`;
+
+    const dueColor = daysL===null?'var(--text2)':daysL<0?'var(--red)':daysL<=3?'var(--gold)':'var(--grn)';
+
+    return `<tr>
+      <td style="font-weight:700;font-size:.8rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item}">${item}</td>
+      <td style="font-size:.76rem;color:var(--text2);">${j['Customer']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;">${qty}</td>
+      <td style="font-size:.75rem;">${nbd?fd(nbd):'—'}</td>
+      <td style="max-width:260px;">${machBadges}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--ind);">${totalEstHrs?totalEstHrs.toFixed(1)+'h':'—'}</td>
+      <td style="font-weight:700;color:${dueColor};">${daysL===null?'—':daysL<0?Math.abs(daysL)+'d LATE':daysL===0?'TODAY':daysL+'d'}</td>
+    </tr>`;
+  }).join('');
+}
+
 
 // ── INIT ───────────────────────────────────────
 window.onload=()=>{
