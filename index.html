@@ -263,32 +263,6 @@ tr:hover td{background:rgba(99,102,241,.02);}
           </div>
           <div><label>Mat Notes</label><input id="fMatNotes" placeholder="50 recd 25-Apr"></div>
         </div>
-        <div class="fg fg-2" style="margin-bottom:10px;">
-          <div>
-            <label>Lathe Assignment <span style="font-size:.65rem;color:var(--text2);font-weight:400;">(for lathe operations)</span></label>
-            <select id="fLathe">
-              <option value="">— Not assigned —</option>
-              <option value="lathe_big1">Lathe Big 1</option>
-              <option value="lathe_big2">Lathe Big 2</option>
-              <option value="lathe_med3">Lathe Med 3</option>
-              <option value="lathe_med4">Lathe Med 4</option>
-              <option value="lathe_med5">Lathe Med 5</option>
-              <option value="lathe_sm6">Lathe Small 6</option>
-              <option value="lathe_sm7">Lathe Small 7</option>
-            </select>
-          </div>
-          <div>
-            <label>Machine Override <span style="font-size:.65rem;color:var(--text2);font-weight:400;">(for CNC/VMC/Drilling)</span></label>
-            <select id="fMachine">
-              <option value="">— Auto detect —</option>
-              <option value="cnc">CNC Turning</option>
-              <option value="vmc">VMC</option>
-              <option value="drilling">Drilling</option>
-              <option value="inspection">Inspection / QC</option>
-              <option value="packing">Packing & Assembly</option>
-            </select>
-          </div>
-        </div>
         <div style="margin-bottom:10px;"><label>Notes</label><input id="fNotes" placeholder="Special instructions..."></div>
         <button class="btn bp bfull" onclick="addJob()">+ ADD JOB</button>
       </div>
@@ -653,63 +627,96 @@ function updateCustList(){
   });
 }
 
+// ── MACHINE OPTIONS ──────────────────────────────
+const MACH_OPTS = [
+  ['',            '— Select Machine —'],
+  ['lathe_big1',  'Lathe Big 1'],
+  ['lathe_big2',  'Lathe Big 2'],
+  ['lathe_med3',  'Lathe Med 3'],
+  ['lathe_med4',  'Lathe Med 4'],
+  ['lathe_med5',  'Lathe Med 5'],
+  ['lathe_sm6',   'Lathe Small 6'],
+  ['lathe_sm7',   'Lathe Small 7'],
+  ['cnc',         'CNC Turning'],
+  ['vmc',         'VMC'],
+  ['drilling',    'Drilling'],
+  ['inspection',  'Inspection / QC'],
+  ['packing',     'Packing & Assembly'],
+];
+function machOptHtml(sel){
+  return MACH_OPTS.map(([v,n])=>`<option value="${v}"${sel===v?' selected':''}>${n}</option>`).join('');
+}
+// Parse Est Times — supports old {"op":"HH:MM"} and new {"op":{"machine":"x","time":"HH:MM"}}
+function parseEstTimes(raw){
+  let parsed={};
+  try{ if(raw) parsed=JSON.parse(raw); }catch(e){}
+  const result={};
+  Object.entries(parsed).forEach(([op,val])=>{
+    result[op] = (typeof val==='string') ? {machine:'',time:val} : {machine:val.machine||'',time:val.time||''};
+  });
+  return result;
+}
+
 // ── JOB EDIT MODAL ─────────────────────────────
 function openJob(j){
-  $('jmtitle').textContent = '✏️ Edit — ' + (j['Item Desc']||'Job');
-  const lOpts = ['','lathe_big1','lathe_big2','lathe_med3','lathe_med4','lathe_med5','lathe_sm6','lathe_sm7']
-    .map(v=>{ const n=v?v.replace('lathe_','Lathe ').replace('big','Big ').replace('med','Med ').replace('sm','Small '):'— Not assigned —'; return `<option value="${v}"${j['Lathe']===v?' selected':''}>${n}</option>`; }).join('');
-  const mOpts = [['','— Auto detect —'],['cnc','CNC Turning'],['vmc','VMC'],['drilling','Drilling'],['inspection','Inspection / QC'],['packing','Packing & Assembly']]
-    .map(([v,n])=>`<option value="${v}"${j['Machine']===v?' selected':''}>${n}</option>`).join('');
+  $('jmtitle').textContent = '✏️ ' + (j['Item Desc']||'Job');
+  const ests = parseEstTimes(j['Est Times']);
 
-  // Parse existing est times
-  let ests = {};
-  try { if(j['Est Times']) ests=JSON.parse(j['Est Times']); } catch(e){}
-  const estRows = Object.entries(ests).map(([op,t])=>
-    `<div class="est-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <input class="est-op" value="${op}" placeholder="Operation" style="flex:1;padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;">
-      <input class="est-t"  value="${t}"  placeholder="HH:MM" style="width:80px;padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;font-family:'JetBrains Mono',monospace;">
-      <button onclick="this.parentElement.remove()" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:.8rem;">✕</button>
-    </div>`).join('');
+  const makeRow = (op='',mach='',time='') => `
+    <div class="est-row" style="display:grid;grid-template-columns:1fr 1.5fr 85px 30px;gap:5px;margin-bottom:7px;align-items:center;">
+      <input class="est-op" value="${op}" placeholder="e.g. Rough Turning"
+        style="padding:7px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.77rem;width:100%;box-sizing:border-box;">
+      <select class="est-mach"
+        style="padding:7px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.74rem;width:100%;box-sizing:border-box;">
+        ${machOptHtml(mach)}
+      </select>
+      <input class="est-t" value="${time}" placeholder="00:45"
+        style="padding:7px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;font-family:'JetBrains Mono',monospace;width:100%;box-sizing:border-box;">
+      <button onclick="this.closest('.est-row').remove()"
+        style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:5px 7px;cursor:pointer;font-size:.82rem;">✕</button>
+    </div>`;
+
+  const estRows = Object.entries(ests).map(([op,v])=>makeRow(op,v.machine,v.time)).join('');
+
+  const inp = (id,val,ph='',type='text') =>
+    `<input id="${id}" value="${val||''}" placeholder="${ph}" type="${type}"
+      style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;">`;
+  const lbl = txt =>
+    `<label style="font-size:.66rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">${txt}</label>`;
 
   $('jmbody').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Item / DRG No *</label>
-        <input id="ej_item" value="${j['Item Desc']||''}" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Customer</label>
-        <input id="ej_cust" value="${j['Customer']||''}" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">PO No</label>
-        <input id="ej_po" value="${j['PO No']||''}" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Qty</label>
-        <input id="ej_qty" type="number" value="${j['Qty']||''}" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Price (₹)</label>
-        <input id="ej_price" type="number" value="${j['Price']||''}" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">NBD (dd/mm/yyyy)</label>
-        <input id="ej_nbd" value="${j['NBD']||''}" placeholder="25/03/2026" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
+      <div>${lbl('Item / DRG No *')}${inp('ej_item',j['Item Desc'])}</div>
+      <div>${lbl('Customer')}${inp('ej_cust',j['Customer'])}</div>
+      <div>${lbl('PO No')}${inp('ej_po',j['PO No'])}</div>
+      <div>${lbl('Qty')}${inp('ej_qty',j['Qty'],'','number')}</div>
+      <div>${lbl('Price (₹)')}${inp('ej_price',j['Price'],'','number')}</div>
+      <div>${lbl('NBD (dd/mm/yyyy)')}${inp('ej_nbd',j['NBD'],'25/03/2026')}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Status</label>
+      <div>${lbl('Status')}
         <select id="ej_status" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;">
           ${STATUSES.map(s=>`<option ${j['Status']===s.id?'selected':''}>${s.id}</option>`).join('')}
         </select></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Mat Notes</label>
-        <input id="ej_mat" value="${j['Mat Notes']||''}" placeholder="e.g. 50 recd 25-Apr" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></div>
+      <div>${lbl('Mat Notes')}${inp('ej_mat',j['Mat Notes'],'e.g. 50 recd 25-Apr')}</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Lathe Assignment</label>
-        <select id="ej_lathe" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;">${lOpts}</select></div>
-      <div><label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Machine Override</label>
-        <select id="ej_machine" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;">${mOpts}</select></div>
-    </div>
-    <div style="margin-bottom:10px;">
-      <label style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Notes</label>
-      <input id="ej_notes" value="${j['Notes']||''}" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;">
-    </div>
+    <div style="margin-bottom:12px;">${lbl('Notes')}${inp('ej_notes',j['Notes'])}</div>
 
-    <div style="font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">⏱ Estimated Times (per piece)</div>
-    <div id="ej_estRows">${estRows}</div>
-    <button onclick="addEstRow()" style="background:var(--ind-l);color:var(--ind);border:1px solid rgba(99,102,241,.2);border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;margin-bottom:12px;">+ Add Operation</button>
-
-    <button class="btn bp bfull" style="margin-top:4px;" onclick="saveJob('${(j['Item Desc']||'').replace(/'/g,"\\'")}','${(j['PO No']||'').replace(/'/g,"\\'")}')">💾 Save Changes</button>
+    <div style="background:var(--bg);border:1.5px solid var(--ind);border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:.66rem;color:var(--ind);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">⚙️ Operations · Machine · Time per Piece</div>
+      <div style="display:grid;grid-template-columns:1fr 1.5fr 85px 30px;gap:5px;margin-bottom:5px;">
+        <div style="font-size:.58rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Operation</div>
+        <div style="font-size:.58rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Machine</div>
+        <div style="font-size:.58rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Time/Pc</div>
+        <div></div>
+      </div>
+      <div id="ej_estRows">${estRows}</div>
+      <button onclick="addEstRow()"
+        style="background:var(--ind-l);color:var(--ind);border:1px solid rgba(99,102,241,.25);border-radius:7px;padding:6px 14px;font-size:.75rem;font-weight:700;cursor:pointer;margin-top:2px;">
+        + Add Operation
+      </button>
+    </div>
+    <button class="btn bp bfull" onclick="saveJob('${(j['Item Desc']||'').replace(/'/g,"\\'")}','${(j['PO No']||'').replace(/'/g,"\\'")}')">💾 Save Changes</button>
   `;
   $('jmodal').classList.add('on');
 }
@@ -719,23 +726,31 @@ function addEstRow(){
   if(!wrap) return;
   const d = document.createElement('div');
   d.className='est-row';
-  d.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+  d.style.cssText='display:grid;grid-template-columns:1fr 1.5fr 85px 30px;gap:5px;margin-bottom:7px;align-items:center;';
   d.innerHTML=`
-    <input class="est-op" placeholder="Operation" style="flex:1;padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;" list="opDL">
-    <input class="est-t"  placeholder="HH:MM" style="width:80px;padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;font-family:'JetBrains Mono',monospace;">
-    <button onclick="this.parentElement.remove()" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:.8rem;">✕</button>`;
+    <input class="est-op" placeholder="e.g. Rough Turning"
+      style="padding:7px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.77rem;width:100%;box-sizing:border-box;">
+    <select class="est-mach"
+      style="padding:7px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.74rem;width:100%;box-sizing:border-box;">
+      ${machOptHtml('')}
+    </select>
+    <input class="est-t" placeholder="00:45"
+      style="padding:7px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;font-family:'JetBrains Mono',monospace;width:100%;box-sizing:border-box;">
+    <button onclick="this.closest('.est-row').remove()"
+      style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:5px 7px;cursor:pointer;font-size:.82rem;">✕</button>`;
   wrap.appendChild(d);
-  wrap.querySelector('.est-op:last-of-type')?.focus?.() || d.querySelector('.est-op')?.focus();
+  d.querySelector('.est-op').focus();
 }
 
 function saveJob(origItem, origPO){
-  const item    = $('ej_item')?.value.trim();
+  const item = $('ej_item')?.value.trim();
   if(!item){ toast('Item name required','e'); return; }
   const estData = {};
   document.querySelectorAll('#ej_estRows .est-row').forEach(row=>{
-    const op = row.querySelector('.est-op')?.value.trim();
-    const t  = row.querySelector('.est-t')?.value.trim();
-    if(op && t) estData[op] = t;
+    const op   = row.querySelector('.est-op')?.value.trim();
+    const mach = row.querySelector('.est-mach')?.value||'';
+    const time = row.querySelector('.est-t')?.value.trim();
+    if(op && time) estData[op] = { machine:mach, time };
   });
   const updated = {
     'PO No':     $('ej_po')?.value.trim()||'',
@@ -747,18 +762,14 @@ function saveJob(origItem, origPO){
     'Status':    $('ej_status')?.value||'Pending',
     'Mat Notes': $('ej_mat')?.value.trim()||'',
     'Notes':     $('ej_notes')?.value.trim()||'',
-    'Lathe':     $('ej_lathe')?.value||'',
-    'Machine':   $('ej_machine')?.value||'',
+    'Lathe':     '', 'Machine': '',
     'Est Times': Object.keys(estData).length ? JSON.stringify(estData) : '',
-    _origItem: origItem,
-    _origPO:   origPO,
+    _origItem: origItem, _origPO: origPO,
   };
-  // Update local DB
-  const idx = DB.jobs.findIndex(j=>j['Item Desc']===origItem&&j['PO No']===origPO);
+  const idx = DB.jobs.findIndex(j=>j['Item Desc']===origItem&&(j['PO No']||'')===(origPO||''));
   if(idx>=0) DB.jobs[idx]={...DB.jobs[idx],...updated};
   push('updateJob', updated);
-  cm('jmodal');
-  renderJobs(); renderKanban();
+  cm('jmodal'); renderJobs(); renderKanban();
   toast('✅ Job saved');
 }
 
@@ -1311,10 +1322,14 @@ function calcMachineLoad() {
     let estTimes = {};
     try { if(j['Est Times']) estTimes = JSON.parse(j['Est Times']); } catch(e) {}
 
-    Object.entries(estTimes).forEach(([op, pcTime]) => {
-      const machId = detectMachine(op, assignedLathe);
+    Object.entries(estTimes).forEach(([op, val]) => {
+      // Support both old string format and new {machine, time} format
+      const pcTime   = (typeof val === 'object') ? (val.time||'') : val;
+      const explicitMach = (typeof val === 'object') ? (val.machine||'') : '';
+      const machId   = explicitMach || detectMachine(op, assignedLathe);
       if(!machId || !load[machId]) return;
       const pcMins   = timeToMins(pcTime);
+      if(!pcMins) return;
       const totalHrs = (pcMins * qty) / 60;
       load[machId].queuedHrs += totalHrs;
       load[machId].jobs.push({ item, op, qty, pcTime, totalHrs, nbd: j['NBD'], status: j['Status'] });
