@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Push Jobs</title>
+<style>
+  body{font-family:monospace;background:#0d1117;color:#c9d1d9;padding:24px;max-width:800px;margin:0 auto;}
+  h2{color:#f59e0b;}
+  .row{padding:6px 10px;margin:4px 0;border-radius:6px;background:#161b22;font-size:.8rem;display:flex;justify-content:space-between;}
+  .ok{border-left:3px solid #10b981;}
+  .err{border-left:3px solid #ef4444;color:#f87171;}
+  .skip{border-left:3px solid #6b7280;color:#6b7280;}
+  #status{font-size:1.1rem;font-weight:700;margin:16px 0;color:#f59e0b;}
+  button{background:#f59e0b;color:#000;border:none;padding:12px 28px;border-radius:8px;font-size:1rem;font-weight:800;cursor:pointer;margin-top:12px;}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<h2>📋 Push Jobs to Sheet</h2>
+<div id="status">Ready — click Push to start</div>
+<button id="btn" onclick="pushAll()">▶ Push All Jobs</button>
+<div id="log" style="margin-top:20px;"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbz3C3lVIwqQ_lhFK2rIdl8sFkXn4VuMqtBQ5am7cRN_KCfQPGvY0z7Kogo2dHuJYhgS/exec';
+
+// All jobs extracted from screenshot
+// Format: PO No, PO Date, Customer, Item Desc, Qty, Price, NBD, Status
+const JOBS = [
+  // Po-64 group
+  ['Po-64 (Dev En)', '19/07/2025', '',        'CP-D33-01431(A) - Dia 140x1',  70,  475,    '05/08/2025', 'Pending'],
+  // P07064146
+  ['P07064146',      '07/11/2025', '',        '3814-0026',                     20,  665,    '23/12/2025', 'Pending'],
+  // P02077863
+  ['P02077863',      '03/12/2025', '',        '8019-0168',                     0,   15750,  '',           'Pending'],
+  // P02078328
+  ['P02078328',      '17/12/2025', '',        '8019-0156',                     1,   8900,   '02/03/2026', 'Pending'],
+  // P02078402 group — multiple items same PO
+  ['P02078402',      '18/12/2025', '',        '8019-0154',                     1,   9600,   '25/02/2026', 'Pending'],
+  ['P02078402',      '18/12/2025', '',        '8019-0156',                     8,   8900,   '25/02/2026', 'Pending'],
+  ['P02078402',      '18/12/2025', '',        '8019-0157',                     5,   11250,  '25/02/2026', 'Pending'],
+  ['P02078402',      '18/12/2025', '',        '8019-0166',                     5,   11250,  '25/02/2026', 'Pending'],
+  ['P02078402',      '18/12/2025', '',        '8019-0167',                     0,   15750,  '25/02/2026', 'Pending'],
+  ['P02078402',      '18/12/2025', '',        '8019-0168',                     0,   15750,  '25/02/2026', 'Pending'],
+  ['P02078402',      '18/12/2025', '',        '8019-0169',                     0,   11700,  '25/02/2026', 'Pending'],
+  // 2601069693
+  ['2601069693',     '16/01/2026', '',        'PD-A08-03175',                  10,  2575,   '28/01/2026', 'Pending'],
+  // 8425010672
+  ['8425010672',     '21/01/2026', '',        'DPEQ000017 - 4 holes',         590,  520.6,  '07/03/2026', 'Pending'],
+  // P07062441 group
+  ['P07062441',      '26/08/2025', '',        '5602-0108',                     1,   0,      '',           'Pending'],
+  ['P07062939',      '13/09/2025', '',        '3814-0119',                     5,   0,      '',           'Pending'],
+  ['P07062964',      '13/09/2025', '',        '380E-0007',                     3,   0,      '',           'Pending'],
+  ['P07063035',      '17/09/2025', '',        '3814-0138',                     1,   0,      '',           'Pending'],
+  ['P07063965',      '01/11/2025', '',        '3814-0057',                     1,   0,      '',           'Pending'],
+  ['P07064450',      '18/11/2025', '',        '3814-0007',                    30,   0,      '',           'Pending'],
+  ['P07066542',      '17/02/2026', '',        '5602-0108',                     6,   0,      '',           'Pending'],
+  ['P07066542',      '17/02/2026', '',        '3609-0008',                    25,   0,      '',           'Pending'],
+  ['P07066542',      '17/02/2026', '',        '380E-0003',                     9,   0,      '',           'Pending'],
+  // Dev-172 group
+  ['Dev-172',        '26/02/2026', '',        'PD-A02-01470',                 10,   1500,   '05/03/2026', 'Pending'],
+  ['Dev-172',        '26/02/2026', '',        'PD-A0201913',                  25,   1645,   '05/03/2026', 'Pending'],
+  ['Dev-172',        '26/02/2026', '',        'PD-A02-01914',                 25,   1645,   '05/03/2026', 'Pending'],
+];
+
+async function push(job) {
+  const [poNo, poDate, customer, itemDesc, qty, price, nbd, status] = job;
+  const payload = {
+    action:      'addJob',
+    'PO No':     poNo,
+    'PO Date':   poDate,
+    'Customer':  customer,
+    'Item Desc': itemDesc,
+    'Qty':       qty,
+    'Price':     price,
+    'NBD':       nbd,
+    'Notes':     '',
+    'Status':    status,
+    'Mat Notes': '',
+    'Est Times': '',
+    'Lathe':     '',
+    'Machine':   '',
+  };
+  const r = await fetch(API, { method:'POST', body: JSON.stringify(payload) });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.error || 'Unknown error');
+}
+
+async function pushAll() {
+  const btn = document.getElementById('btn');
+  const log = document.getElementById('log');
+  const st  = document.getElementById('status');
+  btn.disabled = true;
+  log.innerHTML = '';
+  let ok = 0, fail = 0;
+
+  for (let i = 0; i < JOBS.length; i++) {
+    const job = JOBS[i];
+    const label = job[3] + (job[0] ? ' ('+job[0]+')' : '');
+    st.textContent = `Pushing ${i+1}/${JOBS.length} — ${job[3]}`;
+    try {
+      await push(job);
+      ok++;
+      log.innerHTML += `<div class="row ok"><span>${label}</span><span>✅ Done</span></div>`;
+    } catch(e) {
+      fail++;
+      log.innerHTML += `<div class="row err"><span>${label}</span><span>❌ ${e.message}</span></div>`;
+    }
+    await new Promise(r => setTimeout(r, 400)); // small delay between pushes
+  }
+
+  st.textContent = `✅ Done — ${ok} pushed, ${fail} failed`;
+  st.style.color = fail ? '#ef4444' : '#10b981';
+  btn.disabled = false;
+  btn.textContent = '↻ Push Again';
+}
+</script>
+</body>
+</html>
