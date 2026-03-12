@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ProdTrack — Operator</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080c10;
+  --surface: #0f1620;
+  --surface2: #161f2e;
+  --surface3: #1c2838;
+  --border: #263040;
+  --accent: #00d4aa;
+  --accent-dim: rgba(0,212,170,0.12);
+  --danger: #ff3b3b;
+  --danger-dim: rgba(255,59,59,0.12);
+  --warn: #ffaa00;
+  --warn-dim: rgba(255,170,0,0.12);
+  --text: #dce8f0;
+  --text2: #6a8090;
+  --text3: #2d3d4d;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+
+body {
+  font-family:'Barlow Condensed',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+  position:relative;
+}
+
+/* Subtle grid background */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,212,170,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,170,0.025) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── SCREENS ── */
+.screen { display:none; flex-direction:column; height:100vh; overflow-y:auto; position:relative; z-index:1; }
+.screen.active { display:flex; }
+
+/* ═══════════════════════════
+   SCREEN: INVALID / ERROR
+═══════════════════════════ */
+#screen-invalid {
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:40px 24px;
+}
+.err-icon { font-size:4rem; margin-bottom:20px; opacity:0.4; }
+.err-title { font-size:1.8rem; font-weight:700; letter-spacing:2px; color:var(--danger); margin-bottom:10px; }
+.err-sub { font-size:1rem; color:var(--text2); line-height:1.5; }
+
+/* ═══════════════════════════
+   SCREEN: MAIN OPERATOR
+═══════════════════════════ */
+#screen-main { padding:0; }
+
+/* Header strip */
+.op-header {
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.op-header-left { }
+.op-name-tag {
+  font-size:1.5rem;
+  font-weight:800;
+  letter-spacing:2px;
+  color:var(--accent);
+  line-height:1;
+}
+.op-name-guj {
+  font-family:'Noto Sans Gujarati',sans-serif;
+  font-size:0.8rem;
+  color:var(--text2);
+  margin-top:2px;
+}
+.op-header-right { text-align:right; }
+.op-clock {
+  font-family:'JetBrains Mono',monospace;
+  font-size:1.1rem;
+  font-weight:700;
+  color:var(--text);
+}
+.op-date {
+  font-size:0.8rem;
+  color:var(--text2);
+  margin-top:2px;
+}
+
+/* Main content area */
+.op-body {
+  flex:1;
+  padding:20px 18px 30px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  overflow-y:auto;
+}
+
+/* Section label */
+.sec-label {
+  font-size:0.65rem;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--text2);
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.sec-label::after {
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--border);
+}
+
+/* Dropdowns */
+.drop-wrap { position:relative; }
+.drop-wrap::after {
+  content:'▾';
+  position:absolute;
+  right:16px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--text2);
+  font-size:1rem;
+  pointer-events:none;
+}
+.op-select {
+  width:100%;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:1.2rem;
+  font-weight:600;
+  letter-spacing:0.5px;
+  padding:15px 44px 15px 18px;
+  outline:none;
+  appearance:none;
+  cursor:pointer;
+  transition:border-color 0.2s, background 0.2s;
+}
+.op-select:focus { border-color:var(--accent); background:var(--surface3); }
+.op-select:disabled { opacity:0.4; cursor:not-allowed; }
+.op-select option { background:#0f1620; }
+
+/* Operation info card */
+.op-info-card {
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+  display:none;
+  animation:slideIn 0.25s ease;
+}
+.op-info-card.show { display:block; }
+@keyframes slideIn {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.op-info-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.op-info-row:last-child { border-bottom:none; }
+.op-info-key {
+  font-size:0.7rem;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--text2);
+}
+.op-info-val {
+  font-size:1rem;
+  font-weight:700;
+  color:var(--text);
+  text-align:right;
+}
+
+/* Allocated time display */
+.alloc-time-block {
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+  text-align:center;
+  display:none;
+}
+.alloc-time-block.show { display:block; }
+.alloc-label {
+  font-size:0.65rem;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--text2);
+  margin-bottom:6px;
+}
+.alloc-label .guj {
+  display:block;
+  font-family:'Noto Sans Gujarati',sans-serif;
+  letter-spacing:0;
+  font-size:0.72rem;
+  color:rgba(106,128,144,0.6);
+  margin-top:2px;
+}
+.alloc-hrs {
+  font-family:'JetBrains Mono',monospace;
+  font-size:2.8rem;
+  font-weight:700;
+  color:var(--accent);
+  line-height:1;
+  letter-spacing:2px;
+  transition:color 0.4s;
+}
+.alloc-hrs.warn { color:var(--warn); }
+.alloc-hrs.danger { color:var(--danger); animation:flash 0.8s infinite; }
+@keyframes flash { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+.alloc-sub {
+  font-size:0.8rem;
+  color:var(--text2);
+  margin-top:6px;
+}
+
+/* Live timer */
+.timer-section {
+  display:none;
+  animation:slideIn 0.25s ease;
+}
+.timer-section.show { display:block; }
+
+.timer-display {
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  text-align:center;
+  margin-bottom:12px;
+  position:relative;
+  overflow:hidden;
+}
+.timer-display::before {
+  content:'';
+  position:absolute;
+  bottom:0; left:0;
+  height:3px;
+  background:var(--accent);
+  width:var(--progress, 0%);
+  transition:width 1s linear, background 0.5s;
+}
+.timer-display.warn::before { background:var(--warn); }
+.timer-display.danger::before { background:var(--danger); }
+
+.timer-running-label {
+  font-size:0.65rem;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.timer-running-label .guj {
+  font-family:'Noto Sans Gujarati',sans-serif;
+  letter-spacing:0;
+  font-size:0.72rem;
+  color:rgba(0,212,170,0.5);
+}
+.pulse-ring {
+  width:8px; height:8px;
+  border-radius:50%;
+  background:var(--accent);
+  animation:pulse 1.4s infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.6);opacity:0.4;} }
+
+.timer-count {
+  font-family:'JetBrains Mono',monospace;
+  font-size:3.5rem;
+  font-weight:700;
+  letter-spacing:4px;
+  color:var(--text);
+  line-height:1;
+  transition:color 0.4s;
+}
+.timer-count.warn { color:var(--warn); }
+.timer-count.danger { color:var(--danger); }
+
+.timer-alloc-row {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:16px;
+  margin-top:10px;
+  font-size:0.82rem;
+  color:var(--text2);
+}
+.timer-alloc-row strong { color:var(--text); }
+
+/* Overrun banner */
+.overrun-banner {
+  background:var(--danger-dim);
+  border:1.5px solid rgba(255,59,59,0.4);
+  border-radius:10px;
+  padding:14px 16px;
+  display:none;
+  animation:slideIn 0.25s ease;
+}
+.overrun-banner.show { display:block; }
+.overrun-banner-title {
+  font-size:1rem;
+  font-weight:700;
+  color:var(--danger);
+  letter-spacing:1px;
+}
+.overrun-banner-title .guj {
+  font-family:'Noto Sans Gujarati',sans-serif;
+  display:block;
+  font-size:0.82rem;
+  letter-spacing:0;
+  color:rgba(255,59,59,0.6);
+  margin-top:2px;
+}
+.overrun-banner-detail {
+  font-size:0.88rem;
+  color:var(--text2);
+  margin-top:6px;
+}
+
+/* Remarks input */
+.remarks-wrap { display:none; }
+.remarks-wrap.show { display:block; }
+.op-textarea {
+  width:100%;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:1.1rem;
+  font-weight:500;
+  padding:14px 16px;
+  outline:none;
+  resize:none;
+  height:90px;
+  transition:border-color 0.2s;
+}
+.op-textarea:focus { border-color:var(--accent); }
+.op-textarea::placeholder { color:var(--text3); }
+
+/* CTA Buttons */
+.btn-area { display:flex; flex-direction:column; gap:10px; }
+
+.btn-start {
+  width:100%;
+  padding:22px;
+  background:linear-gradient(135deg, #00d4aa 0%, #00a888 100%);
+  border:none;
+  border-radius:14px;
+  color:#060c10;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:1.8rem;
+  font-weight:800;
+  letter-spacing:4px;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:none;
+  box-shadow:0 6px 30px rgba(0,212,170,0.25);
+  position:relative;
+  overflow:hidden;
+}
+.btn-start::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);
+}
+.btn-start:active { transform:scale(0.97); }
+.btn-start.show { display:block; }
+.btn-start .guj {
+  display:block;
+  font-family:'Noto Sans Gujarati',sans-serif;
+  font-size:1rem;
+  font-weight:700;
+  opacity:0.7;
+  margin-top:4px;
+  letter-spacing:0;
+}
+
+.btn-done {
+  width:100%;
+  padding:22px;
+  background:linear-gradient(135deg, #ff3b3b 0%, #cc2222 100%);
+  border:none;
+  border-radius:14px;
+  color:#fff;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:1.8rem;
+  font-weight:800;
+  letter-spacing:4px;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:none;
+  box-shadow:0 6px 30px rgba(255,59,59,0.25);
+  position:relative;
+  overflow:hidden;
+}
+.btn-done::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);
+}
+.btn-done:active { transform:scale(0.97); }
+.btn-done.show { display:block; }
+.btn-done .guj {
+  display:block;
+  font-family:'Noto Sans Gujarati',sans-serif;
+  font-size:1rem;
+  font-weight:700;
+  opacity:0.85;
+  margin-top:4px;
+  letter-spacing:0;
+}
+
+/* Today's log */
+.today-section {
+  margin-top:4px;
+  padding-top:4px;
+}
+.today-entry {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:13px 16px;
+  margin-bottom:8px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+.te-left .te-job { font-size:1rem; font-weight:700; letter-spacing:0.5px; }
+.te-left .te-machine { font-size:0.82rem; color:var(--text2); margin-top:2px; }
+.te-right { text-align:right; flex-shrink:0; }
+.te-dur {
+  font-family:'JetBrains Mono',monospace;
+  font-size:1rem;
+  font-weight:700;
+}
+.te-dur.ok { color:var(--accent); }
+.te-dur.overrun { color:var(--danger); }
+.te-times { font-size:0.75rem; color:var(--text2); margin-top:2px; }
+.te-overrun-tag {
+  font-size:0.6rem;
+  letter-spacing:1.5px;
+  background:var(--danger-dim);
+  color:var(--danger);
+  border:1px solid rgba(255,59,59,0.3);
+  border-radius:6px;
+  padding:2px 6px;
+  margin-top:4px;
+  display:inline-block;
+}
+
+/* Toast */
+.toast {
+  position:fixed;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%) translateY(100px);
+  background:var(--surface);
+  border:1px solid var(--accent);
+  border-radius:10px;
+  padding:12px 24px;
+  font-size:1rem;
+  font-weight:700;
+  letter-spacing:1px;
+  color:var(--accent);
+  z-index:999;
+  transition:transform 0.3s ease;
+  box-shadow:0 8px 30px rgba(0,0,0,0.6);
+  white-space:nowrap;
+  pointer-events:none;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.err { border-color:var(--danger); color:var(--danger); }
+
+/* Confirm overlay */
+.confirm-overlay {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.8);
+  z-index:500;
+  align-items:flex-end;
+  padding:20px;
+  backdrop-filter:blur(4px);
+}
+.confirm-overlay.show { display:flex; }
+.confirm-box {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  width:100%;
+  animation:slideIn 0.25s ease;
+}
+.confirm-title { font-size:1.3rem; font-weight:700; letter-spacing:1px; margin-bottom:6px; }
+.confirm-detail { font-size:0.95rem; color:var(--text2); line-height:1.5; margin-bottom:20px; }
+.confirm-btns { display:flex; gap:10px; }
+.confirm-yes {
+  flex:1; padding:15px;
+  background:var(--danger);
+  border:none; border-radius:10px;
+  color:#fff;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:1.2rem; font-weight:700; letter-spacing:2px;
+  cursor:pointer;
+}
+.confirm-no {
+  flex:1; padding:15px;
+  background:var(--surface2);
+  border:1px solid var(--border); border-radius:10px;
+  color:var(--text2);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:1.2rem; font-weight:700; letter-spacing:2px;
+  cursor:pointer;
+}
+
+.btn-pause {
+  display: none;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 2px solid var(--gold, #f59e0b);
+  background: rgba(245,158,11,.1);
+  color: #f59e0b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all .2s;
+}
+.btn-pause.show { display: block; }
+.btn-pause:hover { background: rgba(245,158,11,.2); }
+.btn-pause.paused {
+  border-color: var(--accent, #39ff9f);
+  background: rgba(57,255,159,.1);
+  color: var(--accent, #39ff9f);
+}
+.paused-banner {
+  display: none;
+  background: rgba(245,158,11,.12);
+  border: 1.5px solid rgba(245,158,11,.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.paused-banner.show { display: block; }
+.paused-banner-title {
+  font-size: .85rem;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 1.5px;
+}
+.paused-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  color: rgba(245,158,11,.7);
+  margin-top: 3px;
+}
+
+
+/* ── SUPERVISOR PANEL ─────────────────────────── */
+#screen-supervisor {
+  display:none;
+  min-height:100vh;
+  background:var(--bg, #060c10);
+  padding:0 0 40px;
+}
+.sup-hdr {
+  background:linear-gradient(135deg,#1a2236,#0d1526);
+  border-bottom:1px solid rgba(255,255,255,.07);
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.sup-logo { font-size:.95rem;font-weight:800;color:#f59e0b;letter-spacing:-.3px; }
+.sup-sub  { font-size:.72rem;color:rgba(255,255,255,.4);margin-top:1px; }
+.sup-sync { font-size:.65rem;color:rgba(255,255,255,.3);margin-top:2px; }
+
+.sup-tabs { display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.07);background:#0d1526; }
+.sup-tab  { flex:1;padding:11px 6px;text-align:center;font-size:.72rem;font-weight:700;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s; }
+.sup-tab.active { color:#f59e0b;border-bottom-color:#f59e0b; }
+
+.sup-page { display:none;padding:16px; }
+.sup-page.active { display:block; }
+
+.sup-card { background:#0d1526;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px;margin-bottom:12px; }
+.sup-card-title { font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:10px; }
+
+.sup-job { background:#101a2e;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:11px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }
+.sup-job-name { font-weight:700;font-size:.85rem;color:#e0e8ff; }
+.sup-job-meta { font-size:.7rem;color:rgba(255,255,255,.4); }
+.sup-status-sel { background:#1a2744;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e0e8ff;font-size:.72rem;padding:4px 8px;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer; }
+
+.sup-inp { width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#e0e8ff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;outline:none;margin-bottom:8px;box-sizing:border-box; }
+.sup-inp:focus { border-color:#f59e0b; }
+.sup-sel { width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.1);background:#101a2e;color:#e0e8ff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;outline:none;margin-bottom:8px;box-sizing:border-box;cursor:pointer; }
+.sup-btn { width:100%;padding:13px;border-radius:10px;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:.88rem;font-weight:800;cursor:pointer;letter-spacing:.5px;margin-top:4px; }
+.sup-btn-gold { background:#f59e0b;color:#1a0a00; }
+.sup-btn-grn  { background:#10b981;color:#fff; }
+.sup-btn-red  { background:#ef4444;color:#fff; }
+
+.sup-log-row { background:#101a2e;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:.75rem;color:#b0b8d0; }
+.sup-log-op { font-weight:700;color:#f59e0b;font-size:.8rem; }
+
+.sb-p  {background:rgba(245,158,11,.15);color:#f59e0b;}
+.sb-mo {background:rgba(14,165,233,.15);color:#38bdf8;}
+.sb-mr {background:rgba(20,184,166,.15);color:#2dd4bf;}
+.sb-ip {background:rgba(99,102,241,.15);color:#818cf8;}
+.sb-st {background:rgba(239,68,68,.15);color:#f87171;}
+.sb-c  {background:rgba(16,185,129,.15);color:#34d399;}
+.sb-d  {background:rgba(139,92,246,.15);color:#a78bfa;}
+
+</style>
+</head>
+<body>
+
+<!-- SCREEN: Loading -->
+<div class="screen active" id="screen-loading">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;">
+    <div style="font-size:2rem;">⚙️</div>
+    <div style="font-size:1.2rem;font-weight:700;letter-spacing:2px;color:var(--accent);">LOADING...</div>
+    <div style="font-size:.85rem;color:var(--text2);">Connecting to ProdTrack</div>
+  </div>
+</div>
+
+<!-- SCREEN: Invalid link -->
+<div class="screen" id="screen-invalid">
+  <div class="err-icon">🔒</div>
+  <div class="err-title">INVALID LINK</div>
+  <div class="err-sub">This link is not valid or has expired.<br>Please ask your admin for your personal operator link.</div>
+</div>
+
+<!-- SCREEN: Main operator interface -->
+<!-- ══════════════════════════════════════════
+     RESUME SCREEN — shown when unfinished session found
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-resume">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;">
+    <div style="width:100%;max-width:420px;background:#0f1620;border:2px solid rgba(255,170,0,.4);border-radius:16px;padding:24px;">
+      <div style="font-size:1.4rem;font-weight:900;color:#ffaa00;margin-bottom:4px;text-align:center;">⏱ અધૂરું કામ!</div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.5);text-align:center;margin-bottom:20px;font-family:'Noto Sans Gujarati',sans-serif;">Unfinished job found / ચાલુ રહેલ કામ મળ્યું</div>
+
+      <div id="resumeJobInfo" style="background:rgba(255,255,255,.05);border-radius:10px;padding:14px;margin-bottom:16px;"></div>
+
+      <!-- Option A: Resume timer (count from now, gaps become paused time) -->
+      <button onclick="resumeOption('continue')" style="width:100%;padding:14px;border-radius:12px;border:2px solid rgba(0,212,170,.5);background:rgba(0,212,170,.1);color:#00d4aa;font-size:1rem;font-weight:800;cursor:pointer;margin-bottom:10px;letter-spacing:.5px;">
+        ▶ RESUME TIMER<br>
+        <span style="font-size:.72rem;font-weight:400;opacity:.7;">Continue from now — gap treated as break</span>
+      </button>
+
+      <!-- Option B: Discard -->
+      <button onclick="resumeOption('discard')" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.06);color:#ef4444;font-size:.82rem;font-weight:700;cursor:pointer;">
+        ✕ Discard — start fresh
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="screen-main">
+
+  <!-- Header -->
+  <div class="op-header">
+    <div class="op-header-left">
+      <div class="op-name-tag" id="headerName">—</div>
+      <div class="op-name-guj" id="headerNameGuj">ઓપરેટર</div>
+    </div>
+    <div class="op-header-right">
+      <div class="op-clock" id="liveClock">00:00:00</div>
+      <div class="op-date" id="liveDate">—</div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="op-body">
+
+    <!-- Step 1: Select Job -->
+    <div>
+      <div class="sec-label">Select Job &nbsp;/&nbsp; <span style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.8rem;">જૉબ પસંદ કરો</span></div>
+      <div class="drop-wrap">
+        <select class="op-select" id="jobSelect" onchange="onJobChange()">
+          <option value="">— Select a job —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Quick Job Panel (auto-create) -->
+    <div id="quickJobPanel" style="display:none;margin-top:10px;">
+      <div style="background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.4);border-radius:12px;padding:14px;">
+        <div style="font-size:.7rem;font-weight:800;color:#f59e0b;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">
+          🔶 New / Unplanned Job
+        </div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:10px;">
+          Job will be auto-created and your time will be logged. Admin can fill details later.
+        </div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">DRG / Item No *</div>
+        <input id="quickDRG" placeholder="e.g. 3814-0026"
+          style="width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid rgba(245,158,11,.4);background:rgba(245,158,11,.07);color:#fff;font-size:.9rem;font-weight:700;box-sizing:border-box;margin-bottom:8px;outline:none;"
+          oninput="onQuickDRGInput(this.value)">
+        <div style="font-size:.65rem;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Quantity</div>
+        <input id="quickQty" type="number" min="1" value="1" placeholder="1"
+          style="width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid rgba(245,158,11,.4);background:rgba(245,158,11,.07);color:#fff;font-size:.9rem;font-weight:700;box-sizing:border-box;margin-bottom:4px;outline:none;">
+        <div id="quickExistingWarn" style="display:none;font-size:.7rem;color:#f59e0b;margin-top:6px;padding:6px 10px;background:rgba(245,158,11,.1);border-radius:7px;">
+          ⚠ This DRG already exists in the system — select it from the dropdown instead.
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Select Operation (checkboxes) -->
+    <div id="opStep2" style="display:none;">
+      <div class="sec-label">What are you doing? &nbsp;/&nbsp; <span style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.8rem;">શું કામ કરો છો?</span></div>
+      <div id="opCheckGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;"></div>
+      <div id="opCheckError" style="display:none;color:#f87171;font-size:.72rem;margin-top:6px;text-align:center;">Please select at least one operation</div>
+    </div>
+
+    <!-- Operation info -->
+    <div class="op-info-card" id="opInfoCard">
+      <div class="op-info-row">
+        <span class="op-info-key">Machine</span>
+        <span class="op-info-val" id="infoMachine">—</span>
+      </div>
+      <div class="op-info-row">
+        <span class="op-info-key">Stage / Task</span>
+        <span class="op-info-val" id="infoStage">—</span>
+      </div>
+      <div class="op-info-row">
+        <span class="op-info-key">Operation #</span>
+        <span class="op-info-val" id="infoSeq">—</span>
+      </div>
+    </div>
+
+    <!-- Allocated time (before start) -->
+    <div class="alloc-time-block" id="allocBlock">
+      <div class="alloc-label">
+        Allocated Time
+        <span class="guj">ફાળવેલ સમય</span>
+      </div>
+      <div class="alloc-hrs" id="allocHrsDisplay">—</div>
+      <div class="alloc-sub">Complete within this time</div>
+    </div>
+
+    <!-- START button -->
+    <div class="btn-area">
+      <button class="btn-start" id="btnStart" onclick="confirmStart()">
+        ▶ START
+        <span class="guj">▶ શરૂ કરો</span>
+      </button>
+    </div>
+
+    <!-- Live timer (shown after start) -->
+    <div class="timer-section" id="timerSection">
+      <div class="timer-display" id="timerDisplay">
+        <div class="timer-running-label">
+          <div class="pulse-ring"></div>
+          RUNNING &nbsp;/&nbsp; <span class="guj">ચાલુ છે</span>
+        </div>
+        <div class="timer-count" id="timerCount">00:00:00</div>
+        <div class="timer-alloc-row">
+          Elapsed &nbsp;|&nbsp; Allocated: <strong id="timerAllocLabel">—</strong>
+        </div>
+      </div>
+
+      <!-- Overrun banner -->
+      <div class="overrun-banner" id="overrunBanner">
+        <div class="overrun-banner-title">
+          ⚠ TIME OVERRUN
+          <span class="guj">⚠ સમય વધી ગયો — કારણ નોંધો</span>
+        </div>
+        <div class="overrun-banner-detail" id="overrunDetail">—</div>
+      </div>
+
+      <!-- Remarks (appears on overrun) -->
+      <div class="remarks-wrap" id="remarksWrap">
+        <div class="sec-label" style="margin-top:4px;">Reason / Remarks <span style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.8rem;">કારણ નોંધો</span></div>
+        <textarea class="op-textarea" id="remarksInput" placeholder="Explain reason for delay, material issue, machine problem..."></textarea>
+      </div>
+
+      <!-- PAUSED banner -->
+      <div class="paused-banner" id="pausedBanner">
+        <div class="paused-banner-title">⏸ PAUSED &nbsp;/&nbsp; <span class="guj">થોભો</span></div>
+        <div class="paused-time" id="pausedTimeLabel">Press RESUME to continue</div>
+      </div>
+
+      <!-- PAUSE / RESUME button -->
+      <div class="btn-area" style="margin-top:8px;">
+        <button class="btn-pause show" id="btnPause" onclick="togglePause()">
+          ⏸ PAUSE &nbsp;<span class="guj" style="font-size:.8rem;">થોભો</span>
+        </button>
+      </div>
+
+      <!-- Quantity done input -->
+      <div class="remarks-wrap show" id="qtyWrap" style="margin-top:12px;">
+        <div style="background:rgba(255,170,0,.12);border:2px solid rgba(255,170,0,.5);border-radius:12px;padding:10px 14px;">
+          <div class="sec-label" style="color:#ffaa00;font-size:.85rem;letter-spacing:.5px;margin-bottom:6px;">
+            ★ PIECES COMPLETED &nbsp;<span style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.85rem;font-weight:700;">કેટલા ભાગ બન્યા?</span>
+          </div>
+          <input id="qtyDoneInput" type="number" min="1"
+            style="width:100%;padding:13px 14px;border-radius:10px;border:2px solid rgba(255,170,0,.5);background:rgba(255,170,0,.08);color:#ffe066;font-size:1.3rem;font-weight:800;font-family:'JetBrains Mono',monospace;outline:none;text-align:center;"
+            placeholder="0">
+        </div>
+      </div>
+
+      <!-- DONE button -->
+      <div class="btn-area" style="margin-top:8px;">
+        <button class="btn-done show" id="btnDone" onclick="confirmDone()">
+          ■ DONE
+          <span class="guj">■ પૂર્ણ</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Today's log -->
+    <div class="today-section" id="todaySection" style="display:none;">
+      <div class="sec-label">Today's Completed <span style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.8rem;">આજના રેકોર્ડ</span></div>
+      <div id="todayList"></div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SUPERVISOR PANEL — Naresh only                    -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-supervisor">
+
+  <div class="sup-hdr">
+    <div>
+      <div class="sup-logo">⚙️ Supervisor Panel</div>
+      <div class="sup-sub" id="supName">—</div>
+      <div class="sup-sync" id="supSync">—</div>
+    </div>
+    <div style="font-size:1.1rem;color:#f59e0b;">👷‍♂️</div>
+  </div>
+
+  <div class="sup-tabs">
+    <div class="sup-tab active" onclick="supGo('jobs',this)">📋 Jobs</div>
+    <div class="sup-tab" onclick="supGo('logtime',this)">⏱ Log Time</div>
+    <div class="sup-tab" onclick="supGo('addjob',this)">➕ Add Job</div>
+    <div class="sup-tab" onclick="supGo('logs',this)">📜 Logs</div>
+  </div>
+
+  <!-- JOBS TAB -->
+  <div class="sup-page active" id="sup-jobs">
+    <div class="sup-card">
+      <div class="sup-card-title">All Active Jobs — tap status to change</div>
+      <div id="supJobsList"></div>
+    </div>
+  </div>
+
+  <!-- LOG TIME TAB -->
+  <div class="sup-page" id="sup-logtime">
+    <div class="sup-card">
+      <div class="sup-card-title">Log time on behalf of operator</div>
+      <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Operator</label>
+      <select class="sup-sel" id="supOpSel">
+        <option value="">— Select operator —</option>
+        <option value="Mahesh">Mahesh</option>
+        <option value="Vishnu">Vishnu</option>
+        <option value="Harshad">Harshad</option>
+        <option value="Bhavesh">Bhavesh</option>
+        <option value="CNC">CNC</option>
+        <option value="VMC">VMC</option>
+        <option value="Kishan">Kishan</option>
+        <option value="Naresh">Naresh</option>
+        <option value="Helper 1">Helper 1</option>
+        <option value="Helper 2">Helper 2</option>
+      </select>
+
+      <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Job / Item</label>
+      <select class="sup-sel" id="supJobSel">
+        <option value="">— Select job —</option>
+      </select>
+
+      <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Operation</label>
+      <input class="sup-inp" id="supOpName" placeholder="e.g. Final Turning" list="supOpDL">
+      <datalist id="supOpDL">
+        <option value="Final Turning"><option value="Rough Turning"><option value="Threading">
+        <option value="Drilling"><option value="Chamfer"><option value="VMC"><option value="CNC Turning">
+        <option value="Boring"><option value="Grinding"><option value="Inspection"><option value="Packing">
+      </datalist>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Start Time</label>
+          <input class="sup-inp" id="supStart" type="time" style="margin-bottom:0;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">End Time</label>
+          <input class="sup-inp" id="supEnd" type="time" style="margin-bottom:0;">
+        </div>
+      </div>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Qty Done</label>
+          <input class="sup-inp" id="supQty" type="number" min="1" placeholder="e.g. 10" style="margin-bottom:0;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Date</label>
+          <input class="sup-inp" id="supDate" type="date" style="margin-bottom:0;">
+        </div>
+      </div>
+      <input class="sup-inp" id="supRemarks" placeholder="Remarks (optional)" style="margin-top:8px;">
+      <button class="sup-btn sup-btn-gold" onclick="supLogTime()">✓ Submit Time Log</button>
+    </div>
+  </div>
+
+  <!-- ADD JOB TAB -->
+  <div class="sup-page" id="sup-addjob">
+    <div class="sup-card">
+      <div class="sup-card-title">Add new job to system</div>
+      <input class="sup-inp" id="sajItem" placeholder="Item / DRG Number *">
+      <input class="sup-inp" id="sajCust" placeholder="Customer">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input class="sup-inp" id="sajPO"  placeholder="PO No" style="margin-bottom:0;">
+        <input class="sup-inp" id="sajQty" type="number" placeholder="Qty" style="margin-bottom:0;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">NBD (Due Date)</label>
+          <input class="sup-inp" id="sajNBD" type="date" style="margin-bottom:0;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Status</label>
+          <select class="sup-sel" id="sajStatus" style="margin-bottom:0;">
+            <option>Pending</option>
+            <option>Material Ordered</option>
+            <option>Material Received</option>
+            <option>In Process</option>
+          </select>
+        </div>
+      </div>
+      <input class="sup-inp" id="sajNotes" placeholder="Notes" style="margin-top:8px;">
+      <button class="sup-btn sup-btn-grn" onclick="supAddJob()" style="margin-top:8px;">+ Add Job</button>
+    </div>
+  </div>
+
+  <!-- LOGS TAB -->
+  <div class="sup-page" id="sup-logs">
+    <div class="sup-card">
+      <div class="sup-card-title">Recent time logs</div>
+      <div id="supLogsList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Confirm start overlay -->
+<div class="confirm-overlay" id="confirmStartOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Confirm START?</div>
+    <div class="confirm-detail" id="confirmStartDetail">Starting timer for this operation. This cannot be undone by you.</div>
+    <div class="confirm-btns">
+      <button class="confirm-no" onclick="closeConfirm('start')">CANCEL</button>
+      <button class="confirm-yes" style="background:var(--accent);color:#060c10;" onclick="doStart()">START ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm done overlay -->
+<div class="confirm-overlay" id="confirmDoneOverlay" style="align-items:flex-end;padding:0;">
+  <div style="background:#0f1620;border:2px solid rgba(0,212,170,.35);border-radius:20px 20px 0 0;padding:22px 20px 32px;width:100%;max-width:500px;">
+    <div style="font-size:1.1rem;font-weight:900;color:#00d4aa;letter-spacing:1px;margin-bottom:4px;text-align:center;">■ કામ પૂર્ણ — LOG TIME</div>
+    <div style="font-family:'Noto Sans Gujarati',sans-serif;font-size:.75rem;color:rgba(255,255,255,.4);text-align:center;margin-bottom:18px;">કેટલો સમય કામ કર્યું?</div>
+
+    <!-- Actual hours worked -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.65rem;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+        ⏱ ACTUAL HOURS WORKED <span style="font-family:'Noto Sans Gujarati',sans-serif;">વાસ્તવિક કામના કલાક</span>
+      </div>
+      <input id="doneActualHrs" type="number" min="0" step="0.25" placeholder="e.g.  3.5"
+        style="width:100%;padding:14px;border-radius:11px;border:2px solid rgba(0,212,170,.4);background:rgba(0,212,170,.07);color:#00d4aa;font-size:1.4rem;font-weight:900;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;box-sizing:border-box;">
+      <div id="doneHrsHint" style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:4px;text-align:center;"></div>
+    </div>
+
+    <!-- Pieces completed -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.65rem;font-weight:800;color:rgba(255,170,0,.8);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+        ★ PIECES COMPLETED <span style="font-family:'Noto Sans Gujarati',sans-serif;">કેટલા ભાગ બન્યા</span>
+      </div>
+      <input id="donePieces" type="number" min="0" step="1" placeholder="0"
+        style="width:100%;padding:12px;border-radius:11px;border:2px solid rgba(255,170,0,.4);background:rgba(255,170,0,.07);color:#ffaa00;font-size:1.2rem;font-weight:900;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;box-sizing:border-box;">
+    </div>
+
+    <!-- Remarks -->
+    <div style="margin-bottom:18px;">
+      <div style="font-size:.65rem;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">REMARKS / નોંધ (optional)</div>
+      <input id="doneRemarks" type="text" placeholder="Any notes about this operation..."
+        style="width:100%;padding:11px;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#fff;font-size:.88rem;outline:none;box-sizing:border-box;">
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeConfirm('done')" style="flex:1;padding:13px;border-radius:11px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);font-size:.9rem;font-weight:700;cursor:pointer;">BACK</button>
+      <button onclick="doDone()" style="flex:2;padding:13px;border-radius:11px;border:none;background:#00d4aa;color:#060c10;font-size:1rem;font-weight:900;cursor:pointer;letter-spacing:.5px;">✓ LOG &amp; FINISH</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// SHARED DATA — In production this would be
+// fetched from Google Sheets / backend API.
+// Operators are identified by their unique
+// URL token (?op=TOKEN).
+// ═══════════════════════════════════════════
+
+const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycby932Pf26ytzgcn8kDUP-sLEbAj6-4PVPvgaSKZIwTnvK0FnZBovk_rTbYzZlDLx-zW/exec';
+
+const OPERATORS = {
+  'MAH1A': { name:'Mahesh',   nameGuj:'મહેશ'   },
+  'VIS2B': { name:'Vishnu',   nameGuj:'વિષ્ણુ' },
+  'HAR3C': { name:'Harshad',  nameGuj:'હર્ષદ'  },
+  'BHA4D': { name:'Bhavesh',  nameGuj:'ભાવેશ'  },
+  'CNC5E': { name:'CNC',      nameGuj:'સી.એન.સી.' },
+  'VMC6F': { name:'VMC',      nameGuj:'વી.એમ.સી.' },
+  'KIS7G': { name:'Kishan',   nameGuj:'કિશન'   },
+  'NAR8H': { name:'Naresh',   nameGuj:'નરેશ', supervisor:true },
+  'HLP9I': { name:'Helper 1', nameGuj:'હેલ્પર ૧' },
+  'HLP0J': { name:'Helper 2', nameGuj:'હેલ્પર ૨' },
+  'DEMO':  { name:'Demo',     nameGuj:'ડેમો'   },
+};
+
+// Jobs with operations — assigned operators per step
+// In production: loaded from Google Sheets
+// Jobs are loaded live from Google Sheets.
+// This small demo array is only used if the Sheet returns nothing.
+const JOBS = [
+  {
+    id:'JDEMO', po:'PO-DEMO-001', item:'Demo Part × 5pcs', customer:'Demo Customer',
+    operations:[
+      {id:'OD1',seq:1,machine:'CNC Turning', stage:'Turning', operator:'DEMO', allocHrs:2,   done:false},
+      {id:'OD2',seq:2,machine:'VMC',          stage:'Milling', operator:'DEMO', allocHrs:1.5, done:false},
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let STATE = {
+  token: null,
+  operator: null,       // {name, nameGuj}
+  myJobs: [],           // filtered for this operator
+  selectedJob: null,
+  selectedOp: null,     // current op object
+  session: null,        // {startTs, allocMs, pausedMs, pauseStartTs, isPaused}
+  estTimes: {},         // {operation: 'HH:MM/pc'} from job
+  timerInterval: null,
+  todayLogs: [],        // [{jobId,opId,po,item,machine,stage,startTs,endTs,durationHrs,allocHrs,overrun,remarks}]
+};
+
+// ── Session persistence — saved to Google Sheet (survives phone wipe/restart) ──
+// Also mirrors to localStorage as fast cache
+
+function saveSessionToStorage() {
+  if(!STATE.session || !STATE.selectedJob || !STATE.selectedOp) return;
+  const saved = {
+    TOKEN:     STATE.token,
+    OPERATOR:  STATE.operator ? STATE.operator.name : STATE.token,
+    ITEM:      STATE.selectedJob['Item Desc'] || STATE.selectedJob.item || '',
+    OPERATION: STATE.selectedOp.id || '',
+    START_TS:  String(STATE.session.startTs),
+    ALLOC_MS:  String(STATE.session.allocMs),
+    PAUSED_MS: String(STATE.session.pausedMs || 0),
+    EST_TIMES: JSON.stringify(STATE.estTimes || {}),
+    JOB_JSON:  JSON.stringify(STATE.selectedJob),
+    SAVED_AT:  String(Date.now()),
+  };
+  // Fast: localStorage
+  try { localStorage.setItem('prodtrack_session_'+STATE.token, JSON.stringify(saved)); } catch(e){}
+  // Durable: Google Sheet (fire-and-forget)
+  if(typeof SHEET_API_URL !== 'undefined' && SHEET_API_URL) {
+    fetch(SHEET_API_URL, {method:'POST', body:JSON.stringify({action:'saveSession', ...saved})})
+      .catch(()=>{});
+  }
+}
+
+// Called every 60s to keep pausedMs accurate in sheet
+function syncPauseToSheet() {
+  if(!STATE.session || !STATE.token) return;
+  if(typeof SHEET_API_URL === 'undefined' || !SHEET_API_URL) return;
+  fetch(SHEET_API_URL, {method:'POST', body:JSON.stringify({
+    action:'updateSessionPause',
+    token: STATE.token,
+    pausedMs: STATE.session.pausedMs || 0,
+    isPaused: !!STATE.session.isPaused,
+  })}).catch(()=>{});
+}
+
+function clearSessionFromStorage() {
+  try { localStorage.removeItem('prodtrack_session_'+STATE.token); } catch(e){}
+  if(typeof SHEET_API_URL !== 'undefined' && SHEET_API_URL) {
+    fetch(SHEET_API_URL, {method:'POST', body:JSON.stringify({action:'clearSession', token:STATE.token})})
+      .catch(()=>{});
+  }
+}
+
+// Returns session data object or null — checks sheet first, localStorage as fallback
+async function fetchActiveSession() {
+  // Try sheet first
+  if(typeof SHEET_API_URL !== 'undefined' && SHEET_API_URL) {
+    try {
+      const r = await fetch(SHEET_API_URL + '?action=getSession&token=' + encodeURIComponent(STATE.token));
+      const d = await r.json();
+      if(d.ok && d.session) return d.session;
+    } catch(e){}
+  }
+  // Fallback to localStorage
+  try {
+    const raw = localStorage.getItem('prodtrack_session_'+STATE.token);
+    if(raw) {
+      const s = JSON.parse(raw);
+      // Map localStorage format to sheet format (same keys)
+      return s;
+    }
+  } catch(e){}
+  return null;
+}
+
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.onload = async () => {
+  // Show loading immediately, hide it once done
+  show('screen-loading');
+  startClock();
+  const params = new URLSearchParams(window.location.search);
+  const token = (params.get('op') || '').toUpperCase();
+
+  const resolvedToken = token || 'DEMO';
+  const op = OPERATORS[resolvedToken];
+
+  // Supervisor — load sheet and open supervisor panel
+  if (op && op.supervisor) {
+    hide('screen-loading');
+    await loadSheetData();
+    showSupervisor(op);
+    return;
+  }
+
+  if (!op) {
+    hide('screen-loading');
+    show('screen-invalid');
+    return;
+  }
+
+  STATE.token = resolvedToken;
+  STATE.operator = op;
+
+  // Boot main screen immediately
+  hide('screen-loading');
+  show('screen-main');
+  document.getElementById('headerName').textContent = op.name.toUpperCase();
+  document.getElementById('headerNameGuj').textContent = op.nameGuj;
+
+  // Show loading state
+  const jobSel = document.getElementById('jobSelect');
+  jobSel.innerHTML = '<option value="">Loading jobs...</option>';
+  jobSel.disabled = true;
+
+  // Try to load jobs from Google Sheets
+  try {
+    const res = await fetch(SHEET_API_URL + '?action=getAll');
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Sheet error');
+    if (data.jobs && data.jobs.length) {
+      STATE.myJobs = data.jobs.filter(j =>
+        ['Material Received','In Process'].includes(j['Status'] || j.status || '')
+      );
+    } else {
+      STATE.myJobs = [];
+    }
+    jobSel.disabled = false;
+    populateJobDropdown();
+
+    // Check for unfinished session (sheet-backed, survives phone wipe)
+    const savedSess = await fetchActiveSession();
+    if(savedSess && savedSess.START_TS) {
+      const ageMs = Date.now() - parseInt(savedSess.START_TS);
+      // Only offer resume if within 7 days
+      if(ageMs < 7 * 24 * 3600 * 1000) {
+        showResumeScreen(savedSess);
+        return; // wait for operator choice
+      } else {
+        clearSessionFromStorage(); // too old, discard
+      }
+    }
+    renderTodayLog();
+  } catch(e) {
+    console.error('Load failed:', e);
+    jobSel.innerHTML = '<option value="">⚠ Could not load jobs — tap Retry</option>';
+    jobSel.disabled = true;
+    // Show retry button
+    const retryDiv = document.createElement('div');
+    retryDiv.style.cssText = 'text-align:center;margin-top:12px;';
+    retryDiv.innerHTML = `<button onclick="location.reload()" style="background:var(--accent);color:#000;border:none;border-radius:10px;padding:12px 28px;font-size:.9rem;font-weight:700;cursor:pointer;">↻ Retry</button>
+      <div style="font-size:.65rem;color:rgba(255,255,255,.4);margin-top:8px;">Check internet connection</div>`;
+    jobSel.parentElement.appendChild(retryDiv);
+  }
+};
+
+
+// ════════════════════════════════════════════════════════
+// RESUME SCREEN LOGIC
+// ════════════════════════════════════════════════════════
+function showResumeScreen(sess) {
+  // Parse saved session data
+  STATE._resumeSess = sess;
+  const startTs  = parseInt(sess.START_TS);
+  const allocMs  = parseInt(sess.ALLOC_MS);
+  const pausedMs = parseInt(sess.PAUSED_MS||0);
+  const item     = sess.ITEM || '?';
+  const op       = sess.OPERATION || '?';
+  const startStr = new Date(startTs).toLocaleString('en-IN',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const wallMs   = Date.now() - startTs - pausedMs;
+  const wh = Math.floor(wallMs/3600000), wm = Math.floor((wallMs%3600000)/60000);
+  const wallStr  = wh > 0 ? wh+'h '+wm+'m' : wm+'m';
+  const allocH   = Math.round(allocMs/3600000*10)/10;
+
+  document.getElementById('resumeJobInfo').innerHTML = `
+    <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Unfinished Job</div>
+    <div style="font-size:1.1rem;font-weight:900;color:#fff;margin-bottom:4px;">${item}</div>
+    <div style="font-size:.82rem;color:rgba(255,255,255,.6);margin-bottom:8px;">${op}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:.72rem;background:rgba(255,255,255,.07);padding:3px 9px;border-radius:6px;">🕐 Started: ${startStr}</span>
+      <span style="font-size:.72rem;background:rgba(255,170,0,.1);color:#ffaa00;padding:3px 9px;border-radius:6px;">⏱ Wall time: ${wallStr}</span>
+      <span style="font-size:.72rem;background:rgba(99,102,241,.1);color:#a5b4fc;padding:3px 9px;border-radius:6px;">🎯 Allocated: ${allocH}h</span>
+    </div>`;
+
+  hide('screen-main');
+  show('screen-resume');
+}
+
+async function resumeOption(choice) {
+  const sess = STATE._resumeSess;
+  if(!sess) return;
+
+  const startTs  = parseInt(sess.START_TS);
+  const allocMs  = parseInt(sess.ALLOC_MS);
+  const pausedMs = parseInt(sess.PAUSED_MS||0);
+
+  if(choice === 'discard') {
+    clearSessionFromStorage();
+    STATE._resumeSess = null;
+    hide('screen-resume');
+    show('screen-main');
+    return;
+  }
+
+  if(choice === 'manual') {
+    // Operator enters actual hours — log immediately and finish
+    const hrs = parseFloat(document.getElementById('resumeActualHrs').value);
+    if(!hrs || hrs <= 0) { toast('Please enter hours worked', true); return; }
+    const endTs = Date.now();
+    const totalMs = hrs * 3600000;
+    // Reconstruct job and op from saved JSON
+    let job = {};
+    try { job = JSON.parse(sess.JOB_JSON || '{}'); } catch(e){}
+    const opName = sess.OPERATION || '';
+    const qty = parseInt(job['Qty']||1);
+    const totalMins = Math.round(hrs * 60);
+    const perPcMins = totalMins / qty;
+    const pad2 = n => String(Math.floor(n)).padStart(2,'0');
+    const toHHMM = mins => pad2(mins/60)+':'+pad2(mins%60);
+    const startDate = new Date(startTs).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const endDate   = new Date(endTs).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const dateStr   = startDate === endDate ? startDate : startDate + ' – ' + endDate;
+    const opRecord  = OPERATORS_LIST.find(o=>o.id===STATE.token)||{name:STATE.token};
+    const sheetLog  = {
+      'OPERATOR':       opRecord.name,
+      'DRG NUMBER':     job['Item Desc'] || sess.ITEM || '',
+      'OPERATION':      opName,
+      'START TIME':     new Date(startTs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      'END TIME':       new Date(endTs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      'QUANTITY':       qty,
+      'DATE':           dateStr,
+      'REMARKS':        'Manual entry — multi-day job. Actual: '+hrs+'h',
+      'TOTAL TIME':     toHHMM(totalMins),
+      'TIME PER PIECE': toHHMM(perPcMins),
+    };
+    if(typeof SHEET_API_URL !== 'undefined' && SHEET_API_URL) {
+      await fetch(SHEET_API_URL, {method:'POST', body:JSON.stringify({action:'addLog', ...sheetLog})});
+    }
+    clearSessionFromStorage();
+    STATE._resumeSess = null;
+    hide('screen-resume');
+    show('screen-main');
+    toast('✅ Time logged: '+hrs+'h for '+sess.ITEM);
+    return;
+  }
+
+  if(choice === 'continue') {
+    // Resume — treat gap from last save as paused time
+    const lastSavedAt = parseInt(sess.SAVED_AT || sess.START_TS);
+    const gapMs = Date.now() - lastSavedAt;
+    const newPausedMs = pausedMs + gapMs; // all time since last save = break
+    let job = {};
+    try { job = JSON.parse(sess.JOB_JSON || '{}'); } catch(e){}
+    let estTimes = {};
+    try { estTimes = JSON.parse(sess.EST_TIMES || '{}'); } catch(e){}
+
+    STATE.session = { startTs, allocMs, pausedMs: newPausedMs, pauseStartTs: null, isPaused: false };
+    STATE.selectedJob = job;
+    STATE.selectedOp  = {
+      id: sess.OPERATION, machine: sess.OPERATION, stage: sess.OPERATION,
+      machineName: sess.OPERATION, allocHrs: allocMs/3600000, estPerPc: null, done: false,
+    };
+    STATE.estTimes = estTimes;
+
+    hide('screen-resume');
+    show('screen-main');
+
+    // Re-show timer screen
+    document.getElementById('jobSelect').value = job['Item Desc'] || sess.ITEM || '';
+    document.getElementById('jobSelect').disabled = true;
+    document.getElementById('btnStart').classList.remove('show');
+    hideEl('allocBlock'); hideEl('opStep2');
+    showEl('timerSection');
+    const netMs = Date.now() - startTs - newPausedMs;
+    const nh=Math.floor(netMs/3600000), nm=Math.floor((netMs%3600000)/60000);
+    document.getElementById('timerAllocLabel').textContent =
+      'Resumed — '+nh+'h '+nm+'m net time so far (break excluded)';
+    document.getElementById('overrunBanner').classList.remove('show');
+    document.getElementById('remarksWrap').classList.remove('show');
+    document.getElementById('btnPause').classList.add('show');
+    document.getElementById('btnPause').classList.remove('paused');
+    document.getElementById('btnPause').innerHTML = '⏸ PAUSE &nbsp;<span class="guj" style="font-size:.8rem;">થોભો</span>';
+    document.getElementById('pausedBanner').classList.remove('show');
+
+    STATE.timerInterval1s = setInterval(tickTimer, 1000);
+    STATE.timerInterval   = setInterval(()=>{ tickTimer(); checkOverrunPopup(); saveSessionToStorage(); syncPauseToSheet(); }, 10000);
+    tickTimer();
+    STATE._resumeSess = null;
+    toast('▶ Resumed — timer running');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// SUPERVISOR MODE
+// ══════════════════════════════════════════════════════════
+let SUP_JOBS = [], SUP_LOGS = [];
+
+function showSupervisor(op) {
+  show('screen-supervisor');
+  document.getElementById('supName').textContent = op.name + ' — Supervisor';
+  const td = new Date().toISOString().split('T')[0];
+  const ds = document.getElementById('supDate'); if(ds) ds.value = td;
+  const sajNBD = document.getElementById('sajNBD'); if(sajNBD) sajNBD.value = td;
+  renderSupJobs();
+  renderSupLogs();
+}
+
+async function loadSheetData() {
+  try {
+    const r = await fetch(SHEET_API_URL + '?action=getAll');
+    const d = await r.json();
+    SUP_JOBS = d.jobs || [];
+    SUP_LOGS = d.timeLogs || [];
+    const sel = document.getElementById('supJobSel');
+    if(sel) {
+      sel.innerHTML = '<option value="">— Select job —</option>';
+      SUP_JOBS.filter(j=>!['Delivered','Completed'].includes(j['Status']||'')).forEach(j=>{
+        const o = document.createElement('option');
+        o.value = j['Item Desc']||'';
+        o.textContent = (j['PO No']?j['PO No']+' — ':'')+(j['Item Desc']||'')+(j['Qty']?' ×'+j['Qty']:'');
+        sel.appendChild(o);
+      });
+    }
+    document.getElementById('supSync').textContent = 'Synced '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    document.getElementById('supSync').textContent = 'Sync failed';
+  }
+}
+
+function supGo(tab, el) {
+  document.querySelectorAll('.sup-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sup-page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sup-'+tab).classList.add('active');
+  if(tab==='jobs') renderSupJobs();
+  if(tab==='logs') renderSupLogs();
+}
+
+function supBadge(s){
+  const map={'Pending':'sb-p','Material Ordered':'sb-mo','Material Received':'sb-mr','In Process':'sb-ip','Stuck':'sb-st','Completed':'sb-c','Delivered':'sb-d'};
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:700;" class="${map[s]||''}">${s||'—'}</span>`;
+}
+
+function renderSupJobs() {
+  const el = document.getElementById('supJobsList'); if(!el) return;
+  const active = SUP_JOBS.filter(j=>!['Delivered'].includes(j['Status']||''));
+  if(!active.length){el.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:.8rem;text-align:center;padding:16px;">No active jobs</div>';return;}
+  el.innerHTML = active.map(j=>{
+    const item = j['Item Desc']||'—';
+    const nbd  = j['NBD']||'';
+    const statusOpts = ['Pending','Material Ordered','Material Received','In Process','Stuck','Completed','Delivered']
+      .map(s=>`<option${s===(j['Status']||'Pending')?' selected':''}>${s}</option>`).join('');
+    return `<div class="sup-job">
+      <div>
+        <div class="sup-job-name">${item}</div>
+        <div class="sup-job-meta">${j['Customer']||''} ${j['Qty']?'· ×'+j['Qty']:''} ${nbd?'· Due: '+nbd:''}</div>
+      </div>
+      <select class="sup-status-sel" onchange="supChangeStatus('${item.replace(/'/g,"\\'")}',this.value)">${statusOpts}</select>
+    </div>`;
+  }).join('');
+}
+
+function supChangeStatus(item, status) {
+  fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify({action:'updateStatus',item,status})})
+    .then(()=>{
+      const j=SUP_JOBS.find(j=>j['Item Desc']===item); if(j) j['Status']=status;
+      supToast('✓ Status updated: '+status);
+      renderSupJobs();
+    }).catch(()=>supToast('❌ Update failed',true));
+}
+
+function supLogTime() {
+  const op     = document.getElementById('supOpSel')?.value.trim();
+  const job    = document.getElementById('supJobSel')?.value.trim();
+  const opName = document.getElementById('supOpName')?.value.trim();
+  const start  = document.getElementById('supStart')?.value;
+  const end    = document.getElementById('supEnd')?.value;
+  const qty    = parseInt(document.getElementById('supQty')?.value)||1;
+  const date   = document.getElementById('supDate')?.value;
+  const rmks   = document.getElementById('supRemarks')?.value.trim();
+  if(!op||!job||!opName||!start||!end){supToast('⚠ Fill all required fields',true);return;}
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  const totalMins=(eh*60+em)-(sh*60+sm);
+  if(totalMins<=0){supToast('⚠ End time must be after start',true);return;}
+  const totalStr=Math.floor(totalMins/60).toString().padStart(2,'0')+':'+(totalMins%60).toString().padStart(2,'0');
+  const perPcMins=totalMins/qty;
+  const perPcStr=Math.floor(perPcMins/60).toString().padStart(2,'0')+':'+Math.round(perPcMins%60).toString().padStart(2,'0');
+  const dateStr=date?new Date(date).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}):new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  // Auto-create job if DRG doesn't exist
+  const jobExists = SUP_JOBS.some(j=>(j['Item Desc']||'').trim().toLowerCase()===job.trim().toLowerCase());
+  if (!jobExists) {
+    const autoJob = {action:'addJob','PO No':'','PO Date':'','Customer':'','Item Desc':job,'Qty':qty,'Price':'','NBD':'','Notes':'Auto-created by supervisor — '+op,'Status':'In Process','Mat Notes':'','Est Times':'','Lathe':'','Machine':''};
+    fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify(autoJob)}).catch(()=>{});
+    SUP_JOBS.unshift(autoJob);
+    supToast('🔶 Job auto-created: '+job);
+  }
+  const log={action:'addLog','OPERATOR':op,'DRG NUMBER':job,'OPERATION':opName,'START TIME':start,'END TIME':end,'QUANTITY':qty,'DATE':dateStr,'REMARKS':rmks||'(logged by supervisor)','TOTAL TIME':totalStr,'TIME PER PIECE':perPcStr};
+  fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify(log)})
+    .then(()=>{
+      SUP_LOGS.unshift(log);
+      supToast('✓ Time logged for '+op);
+      ['supOpName','supStart','supEnd','supRemarks'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('supQty').value='';
+    }).catch(()=>supToast('❌ Log failed',true));
+}
+
+function supAddJob() {
+  const item=document.getElementById('sajItem')?.value.trim();
+  if(!item){supToast('⚠ Item name required',true);return;}
+  const job={action:'addJob','PO No':document.getElementById('sajPO')?.value.trim()||'','Customer':document.getElementById('sajCust')?.value.trim()||'','Item Desc':item,'Qty':document.getElementById('sajQty')?.value||'','NBD':document.getElementById('sajNBD')?.value||'','Status':document.getElementById('sajStatus')?.value||'Pending','Notes':document.getElementById('sajNotes')?.value.trim()||'','PO Date':'','Price':'','Mat Notes':'','Est Times':'','Lathe':'','Machine':''};
+  fetch(SHEET_API_URL,{method:'POST',body:JSON.stringify(job)})
+    .then(()=>{
+      SUP_JOBS.unshift(job);
+      supToast('✓ Job added: '+item);
+      ['sajItem','sajCust','sajPO','sajQty','sajNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('sajStatus').value='Pending';
+    }).catch(()=>supToast('❌ Failed to add job',true));
+}
+
+function renderSupLogs() {
+  const el=document.getElementById('supLogsList'); if(!el) return;
+  const recent=SUP_LOGS.slice(0,20);
+  if(!recent.length){el.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:.8rem;text-align:center;padding:16px;">No logs yet</div>';return;}
+  el.innerHTML=recent.map(l=>`
+    <div class="sup-log-row">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+        <span class="sup-log-op">${l['OPERATOR']||'—'}</span>
+        <span style="color:rgba(255,255,255,.3);font-size:.68rem;">${l['DATE']||'—'}</span>
+      </div>
+      <div style="font-weight:600;color:#e0e8ff;font-size:.78rem;">${l['DRG NUMBER']||'—'} · ${l['OPERATION']||'—'}</div>
+      <div style="display:flex;gap:12px;margin-top:3px;font-family:'JetBrains Mono',monospace;font-size:.7rem;">
+        <span style="color:#f59e0b;">${l['START TIME']||'—'}→${l['END TIME']||'—'}</span>
+        <span style="color:#10b981;">${l['TOTAL TIME']||'—'}</span>
+        <span style="color:#818cf8;">${l['TIME PER PIECE']||'—'}/pc</span>
+        <span style="color:rgba(255,255,255,.35);">×${l['QUANTITY']||'?'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function supToast(msg,err=false){
+  let t=document.getElementById('t');
+  if(!t){t=document.createElement('div');t.id='t';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${err?'#ef4444':'#10b981'};color:#fff;padding:10px 20px;border-radius:10px;font-size:.82rem;font-weight:700;z-index:9999;display:block;`;
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+// Auto-refresh sheet data every 2 min for supervisor
+setInterval(()=>{ if(document.getElementById('screen-supervisor')?.classList.contains('active')) loadSheetData(); },120000);
+
+// ── QUICK JOB (auto-create) ────────────────────────────────
+function onQuickDRGInput(val) {
+  const warn = document.getElementById('quickExistingWarn');
+  const exists = STATE.myJobs.some(j => (j['Item Desc']||'').trim().toLowerCase() === val.trim().toLowerCase());
+  warn.style.display = exists ? 'block' : 'none';
+  // Update placeholder selectedJob
+  if (STATE.selectedJob && STATE.selectedJob['__NEW__']) {
+    STATE.selectedJob['Item Desc'] = val.trim();
+    STATE.selectedJob['Qty'] = parseInt(document.getElementById('quickQty')?.value)||1;
+  }
+}
+
+async function autoCreateJob(drgNo, qty) {
+  // Check again if it already exists (race condition safety)
+  const exists = STATE.myJobs.some(j => (j['Item Desc']||'').trim().toLowerCase() === drgNo.trim().toLowerCase());
+  if (exists) return; // already there, no need to create
+  const job = {
+    action:      'addJob',
+    'PO No':     '',
+    'PO Date':   '',
+    'Customer':  '',
+    'Item Desc': drgNo,
+    'Qty':       qty,
+    'Price':     '',
+    'NBD':       '',
+    'Notes':     'Auto-created by operator — ' + (STATE.operator?.name||'') + ' on ' + new Date().toLocaleDateString('en-IN'),
+    'Status':    'In Process',
+    'Mat Notes': '',
+    'Est Times': '',
+    'Lathe':     '',
+    'Machine':   '',
+  };
+  try {
+    await fetch(SHEET_API_URL, { method:'POST', body: JSON.stringify(job) });
+    // Add to local jobs list so dropdown shows it
+    STATE.myJobs.push(job);
+  } catch(e) { console.warn('Auto-create job failed', e); }
+}
+
+// ═══════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('liveDate').textContent = now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+
+// ── Auto-update job status in Sheet ──────────
+function pushStatusUpdate(status) {
+  if (!SHEET_API_URL || !STATE.selectedJob) return;
+  const job = STATE.selectedJob;
+  fetch(SHEET_API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateStatus',
+      item:   job.item || job['Item Desc'] || '',
+      status: status
+    })
+  }).catch(e => console.warn('Status update failed', e));
+}
+
+
+// ── Auto-update job status ──────────────────
+function pushStatusUpdate(status) {
+  const API = typeof SHEET_API_URL !== 'undefined' ? SHEET_API_URL : '';
+  if (!API || !STATE.selectedJob) return;
+  const job  = STATE.selectedJob;
+  const item = job['Item Desc'] || job.item || '';
+  if (!item) return;
+  fetch(API, {
+    method: 'POST',
+    body: JSON.stringify({ action:'updateStatus', item, status })
+  }).catch(e => console.warn('Status update failed', e));
+}
+
+// ═══════════════════════════════════════════
+// POPULATE DROPDOWNS
+// ═══════════════════════════════════════════
+async function reloadJobsFromSheet() {
+  try {
+    const res  = await fetch(SHEET_API_URL + '?action=getAll');
+    const data = await res.json();
+    if (data.jobs && data.jobs.length) {
+      // All active jobs — operator selects their own work
+      STATE.myJobs = data.jobs.filter(j =>
+        ['Material Received','In Process'].includes(j['Status'] || j.status || '')
+      );
+    }
+  } catch(e) { console.warn('Reload failed', e); }
+}
+
+function populateJobDropdown() {
+  const sel = document.getElementById('jobSelect');
+  sel.innerHTML = '<option value="">— Select your job —</option>';
+  STATE.myJobs.forEach(j => {
+    const status = j['Status'] || j.status || '';
+    if (!['Material Received','In Process'].includes(status)) return;
+    const o = document.createElement('option');
+    const po   = j['PO No'] || j.po || '';
+    const item = j['Item Desc'] || j.item || j.id || '';
+    const qty  = j['Qty'] || j.qty || '';
+    o.value = item;
+    // Show per-piece time as short codes, bold if urgent
+    let estLabel = '';
+    try {
+      const ets = j['Est Times'] ? JSON.parse(j['Est Times']) : {};
+      const SHORT = {'lathe_big':'L','lathe_med':'L','lathe_sm':'L','cnc':'CNC','vmc':'VMC',
+        'drilling':'D','inspection':'I','packing':'P','custom1':'C1','custom2':'C2'};
+      const parts = Object.entries(ets).map(([k,t])=>{
+        const p=String(t||'').split(':');
+        const mins=parseInt(p[0]||0)*60+parseInt(p[1]||0);
+        if(!mins) return null;
+        const label = mins>=60 ? (mins/60).toFixed(1).replace(/\.0$/,'')+'h' : mins+'m';
+        return (SHORT[k]||k.toUpperCase())+'-'+label;
+      }).filter(Boolean);
+      if(parts.length) estLabel = '  ' + parts.join(',');
+    } catch(e){}
+    const urgent = j['Urgent']==='YES';
+    o.textContent = (urgent ? '🔴 ' : '') + (po ? po+'  —  ' : '') + item + (qty ? '  ×'+qty : '') + estLabel;
+    if(urgent) o.style.fontWeight = 'bold';
+    sel.appendChild(o);
+  });
+  // Always add "not in list" option at the bottom
+  const other = document.createElement('option');
+  other.value = '__NEW__';
+  other.textContent = '🔶 Job not in list — enter DRG No below';
+  sel.appendChild(other);
+}
+
+// ── Custom op labels (editable by operator, saved in sessionStorage) ──
+function getCustomOpLabels() {
+  try { return JSON.parse(sessionStorage.getItem('customOpLabels')||'{}'); } catch(e){ return {}; }
+}
+function setCustomOpLabel(idx, val) {
+  const s = getCustomOpLabels(); s['custom'+idx] = val;
+  try { sessionStorage.setItem('customOpLabels', JSON.stringify(s)); } catch(e){}
+}
+
+const STD_OPS = ['Cutting','Rough','Final','Drilling','Milling','CNC','Keyway','Grinding','Insp','Assembly','Packing'];
+
+// Which STD_OPS map to which machine IDs (for highlighting assigned ops)
+const OP_MACHINE_MAP = {
+  'Cutting':'lathe', 'Rough':'lathe', 'Final':'lathe',
+  'Keyway':'lathe',  'Grinding':'lathe', 'Milling':'lathe',
+  'Drilling':'drilling', 'CNC':'cnc', 'VMC':'vmc',
+  'Insp':'inspection', 'Assembly':'packing', 'Packing':'packing'
+};
+
+function isOpAssigned(opName, estTimes) {
+  // Check if admin entered time for this operation's machine
+  const machGroup = OP_MACHINE_MAP[opName] || '';
+  if(!machGroup) return false;
+  if(machGroup === 'lathe') {
+    return !!(estTimes['lathe_big'] || estTimes['lathe_med'] || estTimes['lathe_sm']);
+  }
+  return !!estTimes[machGroup];
+}
+
+function buildOpGrid(grid, estTimes) {
+  if (!grid) return;
+  grid.innerHTML = '';
+  const ets = estTimes || STATE.estTimes || {};
+  const customLabels = getCustomOpLabels();
+
+  // Styles
+  const BASE   = 'padding:10px 8px;border-radius:10px;font-size:.78rem;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;width:100%;box-sizing:border-box;';
+  const NORMAL = BASE + 'border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);';
+  // Assigned by admin — teal highlight with estimated time shown
+  const ASSIGNED_BASE = BASE + 'border:1.5px solid rgba(20,184,166,.6);background:rgba(20,184,166,.12);color:#fff;';
+
+  STD_OPS.forEach(op => {
+    const assigned = isOpAssigned(op, ets);
+    // Find estimated time for this op to show on button
+    let estTag = '';
+    if(assigned) {
+      const machId = opToMachineId(op, ets);
+      const t = machId ? ets[machId] : null;
+      if(t) {
+        const p = String(t).split(':');
+        const mins = parseInt(p[0]||0)*60 + parseInt(p[1]||0);
+        estTag = mins >= 60
+          ? ' · ' + (mins/60).toFixed(1).replace(/\.0$/,'') + 'h'
+          : ' · ' + mins + 'm';
+      }
+    }
+    const btn = document.createElement('button');
+    btn.type='button'; btn.className='op-check-btn'; btn.dataset.op=op;
+    btn.dataset.assigned = assigned ? '1' : '0';
+    btn.innerHTML = op + (estTag ? '<span style="font-size:.65rem;opacity:.8;">'+estTag+'</span>' : '');
+    btn.style.cssText = assigned ? ASSIGNED_BASE : NORMAL;
+    btn.onclick=()=>toggleOpBtn(btn);
+    grid.appendChild(btn);
+  });
+
+  // Custom 1
+  const wrap1 = document.createElement('div');
+  wrap1.style.cssText='position:relative;';
+  const btn1 = document.createElement('button');
+  btn1.type='button'; btn1.className='op-check-btn'; btn1.dataset.op=customLabels.custom1||'Custom 1';
+  btn1.dataset.assigned='0';
+  btn1.textContent=customLabels.custom1||'Custom 1'; btn1.style.cssText=NORMAL;
+  btn1.onclick=()=>toggleOpBtn(btn1);
+  const edit1 = document.createElement('span');
+  edit1.textContent='✎'; edit1.title='Rename';
+  edit1.style.cssText='position:absolute;top:4px;right:5px;font-size:.65rem;color:rgba(255,255,255,.3);cursor:pointer;z-index:2;line-height:1;';
+  edit1.onclick=(e)=>{e.stopPropagation();const v=prompt('Custom 1 label:',btn1.dataset.op);if(v&&v.trim()){btn1.dataset.op=v.trim();btn1.childNodes[0].textContent=v.trim();setCustomOpLabel(1,v.trim());}};
+  wrap1.appendChild(btn1); wrap1.appendChild(edit1);
+  grid.appendChild(wrap1);
+
+  // Custom 2
+  const wrap2 = document.createElement('div');
+  wrap2.style.cssText='position:relative;';
+  const btn2 = document.createElement('button');
+  btn2.type='button'; btn2.className='op-check-btn'; btn2.dataset.op=customLabels.custom2||'Custom 2';
+  btn2.dataset.assigned='0';
+  btn2.textContent=customLabels.custom2||'Custom 2'; btn2.style.cssText=NORMAL;
+  btn2.onclick=()=>toggleOpBtn(btn2);
+  const edit2 = document.createElement('span');
+  edit2.textContent='✎'; edit2.title='Rename';
+  edit2.style.cssText='position:absolute;top:4px;right:5px;font-size:.65rem;color:rgba(255,255,255,.3);cursor:pointer;z-index:2;line-height:1;';
+  edit2.onclick=(e)=>{e.stopPropagation();const v=prompt('Custom 2 label:',btn2.dataset.op);if(v&&v.trim()){btn2.dataset.op=v.trim();btn2.childNodes[0].textContent=v.trim();setCustomOpLabel(2,v.trim());}};
+  wrap2.appendChild(btn2); wrap2.appendChild(edit2);
+  grid.appendChild(wrap2);
+
+  // Legend
+  const legend = document.createElement('div');
+  const hasAssigned = STD_OPS.some(op => isOpAssigned(op, ets));
+  if(hasAssigned) {
+    legend.style.cssText='grid-column:1/-1;font-size:.62rem;color:rgba(20,184,166,.8);margin-top:2px;text-align:center;';
+    legend.textContent='Teal = assigned by admin with estimated time';
+    grid.appendChild(legend);
+  }
+}
+
+function onJobChange() {
+  const jobId = document.getElementById('jobSelect').value;
+  STATE.selectedOp = null;
+
+  // Reset downstream
+  let opGrid;
+  opGrid = document.getElementById('opCheckGrid');
+  if(opGrid) opGrid.innerHTML='';
+  hideEl('opStep2'); hideEl('opInfoCard'); hideEl('allocBlock');
+  document.getElementById('btnStart').classList.remove('show');
+  hideEl('timerSection');
+  hideEl('quickJobPanel');
+  document.getElementById('quickExistingWarn').style.display='none';
+
+  if (!jobId) return;
+
+  // Handle "not in list" option
+  if (jobId === '__NEW__') {
+    showEl('quickJobPanel');
+    document.getElementById('quickDRG').value = '';
+    document.getElementById('quickQty').value = '1';
+    document.getElementById('quickDRG').focus();
+    // Set a placeholder selectedJob — will be replaced on START
+    STATE.selectedJob = { '__NEW__': true, 'Item Desc': '', 'Qty': 1 };
+    STATE.estTimes = {};
+    // Show operations step for new job
+    const grid2 = document.getElementById('opCheckGrid');
+    buildOpGrid(grid2, {});
+    showEl('opStep2');
+    return;
+  }
+
+  STATE.selectedJob = STATE.myJobs.find(j =>
+    (j['Item Desc'] || j.item || j.id) === jobId
+  ) || null;
+
+  if (!STATE.selectedJob) return;
+
+  // Show the operation input step
+  const j = STATE.selectedJob;
+  // Pre-fill job info card
+  document.getElementById('infoMachine').textContent  = j['Item Desc'] || j.item || '—';
+  document.getElementById('infoStage').textContent    = j['Customer']  || j.customer || '—';
+  document.getElementById('infoSeq').textContent      = (j['PO No'] || j.po || '') + (j['Qty'] ? ' ×' + j['Qty'] + ' pcs' : '');
+  showEl('opInfoCard');
+
+  // Parse estimated times for this job
+  STATE.estTimes = {};
+  try {
+    const raw = j['Est Times'] || j.estTimes || '';
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const LREMAP = {'lathe_big1':'lathe_big','lathe_big2':'lathe_big','lathe_med3':'lathe_med','lathe_med4':'lathe_med','lathe_med5':'lathe_med','lathe_sm6':'lathe_sm','lathe_sm7':'lathe_sm'};
+      STATE.estTimes = {};
+      Object.entries(parsed).forEach(([k,v])=>{
+        const key = LREMAP[k]||k;
+        if(!STATE.estTimes[key]) STATE.estTimes[key] = (typeof v==='object' && v.time) ? v.time : v;
+      });
+    }
+  } catch(e) { STATE.estTimes = {}; }
+
+  // Build operation checkboxes
+  opGrid = document.getElementById('opCheckGrid');
+  buildOpGrid(opGrid, STATE.estTimes);
+  showEl('opStep2');
+}
+
+function toggleOpBtn(btn){
+  const active = btn.classList.toggle('op-active');
+  const assigned = btn.dataset.assigned === '1';
+  if(active){
+    btn.style.background='rgba(99,102,241,.4)';
+    btn.style.border='1.5px solid #818cf8';
+    btn.style.color='#fff';
+  } else if(assigned) {
+    btn.style.background='rgba(20,184,166,.12)';
+    btn.style.border='1.5px solid rgba(20,184,166,.6)';
+    btn.style.color='#fff';
+  } else {
+    btn.style.background='rgba(255,255,255,.05)';
+    btn.style.border='1.5px solid rgba(255,255,255,.15)';
+    btn.style.color='rgba(255,255,255,.5)';
+  }
+  // Check if any op selected → show/hide start
+  const anySelected = document.querySelectorAll('.op-check-btn.op-active').length > 0;
+  document.getElementById('opCheckError').style.display = 'none';
+  if(anySelected && STATE.selectedJob){
+    buildSelectedOp();
+  } else {
+    document.getElementById('btnStart').classList.remove('show');
+    hideEl('allocBlock');
+  }
+}
+
+// Map an operation label to a machine ID from estTimes
+function opToMachineId(opLabel, estTimes) {
+  const op = (opLabel||'').toLowerCase();
+  // Direct match first — if estTimes has an entry keyed by op name
+  if(estTimes[opLabel]) return opLabel;
+  // Map op names to machine IDs by keyword
+  if(op==='cnc'||op.includes('cnc'))                          return 'cnc';
+  if(op==='vmc'||op.includes('vmc'))                          return 'vmc';
+  if(op.includes('drill'))                                     return 'drilling';
+  if(op.includes('insp')||op.includes('qc'))                   return 'inspection';
+  if(op.includes('pack')||op.includes('assembl'))              return 'packing';
+  if(op==='cutting'||op==='rough'||op==='final'||op.includes('lathe')||op.includes('turn')||op.includes('key')||op.includes('grind')||op.includes('mill')||op.includes('boring')||op.includes('thread')||op.includes('chamfer')) {
+    // Lathe op — find which lathe is in estTimes
+    const latheMach = ['lathe_big','lathe_med','lathe_sm'].find(m => estTimes[m]);
+    return latheMach || null;
+  }
+  return null;
+}
+
+function buildSelectedOp(){
+  const selectedOps = [...document.querySelectorAll('.op-check-btn.op-active')].map(b=>b.dataset.op);
+  if(!selectedOps.length || !STATE.selectedJob) return;
+
+  const job = STATE.selectedJob;
+  const qty = parseInt(job['Qty']||1);
+  const ets = STATE.estTimes || {};
+
+  // Sum estimated time only for selected operations
+  let totalEstMins = 0;
+  const opBreakdown = [];
+  selectedOps.forEach(opName => {
+    const machId = opToMachineId(opName, ets);
+    const timeStr = machId ? ets[machId] : null;
+    if(timeStr) {
+      const p = String(timeStr).split(':');
+      const pcMins = parseInt(p[0]||0)*60 + parseInt(p[1]||0);
+      totalEstMins += pcMins;
+      opBreakdown.push(opName + ': ' + pcMins + 'min/pc');
+    }
+  });
+
+  let estLabel = '';
+  if(totalEstMins > 0) {
+    // Simple: show only per-piece time for selected ops
+    if(opBreakdown.length === 1) {
+      const mins = totalEstMins;
+      estLabel = mins >= 60
+        ? Math.floor(mins/60) + (mins%60 ? 'h '+mins%60+'m' : 'h') + ' per piece'
+        : mins + ' min per piece';
+    } else {
+      // Multiple ops — show each simply
+      estLabel = opBreakdown.map(s=>{
+        const m=parseInt(s.split(': ')[1]);
+        return s.split(':')[0] + ': ' + (m>=60 ? Math.floor(m/60)+(m%60?'h '+m%60+'m':'h') : m+'m');
+      }).join('  ·  ');
+    }
+  }
+
+  STATE.selectedOp = {
+    id:          selectedOps.join(', '),
+    machine:     selectedOps.join(', '),
+    stage:       selectedOps.join(', '),
+    machineName: selectedOps.join(', '),
+    allocHrs:    totalEstMins > 0 ? (totalEstMins * qty) / 60 : 8,
+    estPerPc:    null,
+    done:        false,
+  };
+
+  document.getElementById('allocHrsDisplay').textContent = estLabel || 'No estimate — tracking actual time';
+  showEl('allocBlock');
+  document.getElementById('btnStart').classList.add('show');
+  hideEl('timerSection');
+}
+
+// onOpChange removed — replaced by checkbox-based toggleOpBtn/buildSelectedOp
+
+// ═══════════════════════════════════════════
+// CONFIRM START
+// ═══════════════════════════════════════════
+function confirmStart() {
+  if (!STATE.selectedOp) return;
+  const op = STATE.selectedOp;
+  const opsLabel = [...document.querySelectorAll('.op-check-btn.op-active')].map(b=>b.dataset.op).join(' + ') || op.stage;
+  document.getElementById('confirmStartDetail').textContent =
+    `${opsLabel}\nAllocated time: ${formatHrs(op.allocHrs)}\n\nOnce started, only admin can undo.`;
+  showEl('confirmStartOverlay');
+}
+
+function closeConfirm(type) {
+  hideEl(`confirm${type.charAt(0).toUpperCase()+type.slice(1)}Overlay`);
+}
+
+async function doStart() {
+  hideEl('confirmStartOverlay');
+  const op  = STATE.selectedOp;
+  const job = STATE.selectedJob;
+  if (!op || !job) return;
+
+  // Auto-create job if operator used "not in list"
+  if (job['__NEW__'] || job.__NEW__) {
+    const drgNo = document.getElementById('quickDRG')?.value.trim();
+    const qty   = parseInt(document.getElementById('quickQty')?.value)||1;
+    if (!drgNo) { alert('Please enter a DRG / Item number'); return; }
+    job['Item Desc'] = drgNo;
+    job['Qty']       = qty;
+    delete job['__NEW__'];
+    await autoCreateJob(drgNo, qty);
+    hideEl('quickJobPanel');
+  }
+
+  const now = Date.now();
+  STATE.session = {
+    startTs: now,
+    allocMs: op.allocHrs * 3600000,
+  };
+
+  // Hide selectors & start btn, show timer
+  document.getElementById('jobSelect').disabled = true;
+  document.getElementById('btnStart').classList.remove('show');
+  hideEl('allocBlock');
+  showEl('timerSection');
+  const allocLabel = op.allocHrs
+    ? 'Estimated: ' + (op.allocHrs < 1 ? Math.round(op.allocHrs*60)+'m' : Math.round(op.allocHrs*10)/10+'h') + ' — enter actual hours at DONE'
+    : 'No estimate — enter actual hours at DONE';
+  document.getElementById('timerAllocLabel').textContent = allocLabel;
+
+  // Reset overrun UI
+  document.getElementById('overrunBanner').classList.remove('show');
+  document.getElementById('remarksWrap').classList.remove('show');
+
+  // Reset pause state
+  STATE.session.pausedMs = 0;
+  STATE.session.pauseStartTs = null;
+  STATE.session.isPaused = false;
+  document.getElementById('btnPause').classList.add('show');
+  document.getElementById('btnPause').classList.remove('paused');
+  document.getElementById('btnPause').innerHTML = '⏸ PAUSE &nbsp;<span class="guj" style="font-size:.8rem;">થોભો</span>';
+  document.getElementById('pausedBanner').classList.remove('show');
+
+  // Start ticking + auto-save session every 10s
+  STATE.timerInterval = setInterval(()=>{ tickTimer(); checkOverrunPopup(); saveSessionToStorage(); syncPauseToSheet(); }, 10000);
+  STATE.timerInterval1s = setInterval(tickTimer, 1000);
+  tickTimer();
+
+  // Auto-update job status to In Process
+  pushStatusUpdate('In Process');
+
+  toast('Timer started — ' + (op.machine || op.machineName || op.stage || ''));
+}
+
+
+// ═══════════════════════════════════════════
+// PAUSE / RESUME
+// ═══════════════════════════════════════════
+function togglePause() {
+  if (!STATE.session) return;
+  const btn    = document.getElementById('btnPause');
+  const banner = document.getElementById('pausedBanner');
+
+  if (!STATE.session.isPaused) {
+    // PAUSE — freeze timer
+    STATE.session.isPaused     = true;
+    STATE.session.pauseStartTs = Date.now();
+    clearInterval(STATE.timerInterval);
+    clearInterval(STATE.timerInterval1s);
+    btn.classList.add('paused');
+    btn.innerHTML = '▶ RESUME &nbsp;<span class="guj" style="font-size:.8rem;">ચાલુ કરો</span>';
+    banner.classList.add('show');
+    document.getElementById('pausedTimeLabel').textContent =
+      'Paused at ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('timerDisplay').style.opacity = '0.4';
+    toast('Timer paused ⏸');
+  } else {
+    // RESUME — accumulate paused duration
+    STATE.session.pausedMs     = (STATE.session.pausedMs || 0) + (Date.now() - STATE.session.pauseStartTs);
+    STATE.session.isPaused     = false;
+    STATE.session.pauseStartTs = null;
+    btn.classList.remove('paused');
+    btn.innerHTML = '⏸ PAUSE &nbsp;<span class="guj" style="font-size:.8rem;">થોભો</span>';
+    banner.classList.remove('show');
+    document.getElementById('timerDisplay').style.opacity = '1';
+    STATE.timerInterval1s = setInterval(tickTimer, 1000);
+    STATE.timerInterval = setInterval(()=>{ tickTimer(); checkOverrunPopup(); saveSessionToStorage(); syncPauseToSheet(); }, 10000);
+    tickTimer();
+    toast('Timer resumed ▶');
+  }
+}
+
+// ═══════════════════════════════════════════
+// TIMER TICK
+// ═══════════════════════════════════════════
+function tickTimer() {
+  if (!STATE.session) return;
+  if (STATE.session.isPaused) return; // frozen while paused
+  const pausedMs = STATE.session.pausedMs || 0;
+  const elapsed = Date.now() - STATE.session.startTs - pausedMs;
+  const allocMs = STATE.session.allocMs;
+  const overrun = elapsed > allocMs;
+
+  // Format elapsed
+  const h = Math.floor(elapsed / 3600000);
+  const m = Math.floor((elapsed % 3600000) / 60000);
+  const s = Math.floor((elapsed % 60000) / 1000);
+  const str = `${pad(h)}:${pad(m)}:${pad(s)}`;
+
+  const countEl = document.getElementById('timerCount');
+  const displayEl = document.getElementById('timerDisplay');
+
+  countEl.textContent = str;
+
+  // Progress bar (capped at 100%)
+  const pct = Math.min((elapsed / allocMs) * 100, 100);
+  displayEl.style.setProperty('--progress', pct + '%');
+
+  if (overrun) {
+    countEl.className = 'timer-count danger';
+    displayEl.className = 'timer-display danger';
+
+    // Show overrun banner
+    const overrunMs = elapsed - allocMs;
+    const oh = Math.floor(overrunMs / 3600000);
+    const om = Math.floor((overrunMs % 3600000) / 60000);
+    const os = Math.floor((overrunMs % 60000) / 1000);
+    document.getElementById('overrunDetail').textContent =
+      `Over by: ${pad(oh)}:${pad(om)}:${pad(os)} — Please note the reason in the remarks box below.`;
+    document.getElementById('overrunBanner').classList.add('show');
+    document.getElementById('remarksWrap').classList.add('show');
+
+    // Also flash allocated time (already hidden, but update alloc display if visible)
+  } else if (elapsed > allocMs * 0.85) {
+    countEl.className = 'timer-count warn';
+    displayEl.className = 'timer-display warn';
+  } else {
+    countEl.className = 'timer-count';
+    displayEl.className = 'timer-display';
+  }
+}
+
+
+// ── Overrun popup — fires at first overrun then every 30 min ──
+let _lastOverrunPopupAt = 0;
+function checkOverrunPopup() {
+  if(!STATE.session || STATE.session.isPaused) return;
+  const pausedMs = STATE.session.pausedMs || 0;
+  const elapsed  = Date.now() - STATE.session.startTs - pausedMs;
+  if(elapsed <= STATE.session.allocMs) { _lastOverrunPopupAt = 0; return; }
+  const overrunMs = elapsed - STATE.session.allocMs;
+  const now = Date.now();
+  // Show popup at first overrun, then every 30 mins
+  if(_lastOverrunPopupAt === 0 || now - _lastOverrunPopupAt >= 30 * 60 * 1000) {
+    _lastOverrunPopupAt = now;
+    const oh = Math.floor(overrunMs / 3600000);
+    const om = Math.floor((overrunMs % 3600000) / 60000);
+    showOverrunPopup(oh, om);
+  }
+}
+
+function showOverrunPopup(oh, om) {
+  const existing = document.getElementById('overrunPopup');
+  if(existing) existing.remove();
+  const overStr = oh > 0 ? oh+'h '+om+'m' : om+'m';
+  const div = document.createElement('div');
+  div.id = 'overrunPopup';
+  div.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);';
+  div.innerHTML = `
+    <div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:16px;padding:28px 24px;max-width:340px;width:90%;text-align:center;box-shadow:0 0 40px rgba(239,68,68,.4);">
+      <div style="font-size:2.5rem;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:1.2rem;font-weight:900;color:#ef4444;letter-spacing:1px;margin-bottom:6px;">સમય પૂરો થઈ ગયો!</div>
+      <div style="font-family:'Noto Sans Gujarati',sans-serif;font-size:1rem;color:#fca5a5;margin-bottom:10px;line-height:1.5;">
+        ફાળવેલ સમય વીતી ગયો છે.<br>
+        <b style="font-size:1.1rem;">${overStr}</b> વધારાનો સમય ચાલી રહ્યો છે.
+      </div>
+      <div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:16px;">Allocated time exceeded by ${overStr}. Please note reason below.</div>
+      <button onclick="document.getElementById('overrunPopup').remove();document.getElementById('remarksInput').focus();"
+        style="padding:12px 32px;border-radius:10px;border:none;background:#ef4444;color:#fff;font-size:1rem;font-weight:800;cursor:pointer;width:100%;">
+        સમજ્યો — નોંધ કરીશ &nbsp;/ OK
+      </button>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+// ═══════════════════════════════════════════
+// CONFIRM DONE
+// ═══════════════════════════════════════════
+function confirmDone() {
+  if (!STATE.session) return;
+  // Show log-time panel
+  const pausedMs = STATE.session.pausedMs || 0;
+  const wallMs   = Date.now() - STATE.session.startTs - pausedMs;
+  const wallHrs  = Math.round(wallMs / 360000) / 10; // 1 decimal
+  // Pre-fill with wall-clock time as suggestion
+  const hrsInput = document.getElementById('doneActualHrs');
+  if(hrsInput && !hrsInput.value) hrsInput.value = wallHrs;
+  // Hint
+  const hint = document.getElementById('doneHrsHint');
+  if(hint) hint.textContent = 'Timer shows ' + wallHrs + 'h wall-clock — edit if you took breaks or this is a multi-day job';
+  // Copy any remarks from the remarks box
+  const existingRemarks = document.getElementById('remarksInput')?.value.trim();
+  const doneRem = document.getElementById('doneRemarks');
+  if(doneRem && existingRemarks && !doneRem.value) doneRem.value = existingRemarks;
+  // Pre-fill pieces from qty input
+  const qtyVal = document.getElementById('qtyDoneInput')?.value;
+  const donePcs = document.getElementById('donePieces');
+  if(donePcs && qtyVal && !donePcs.value) donePcs.value = qtyVal;
+  showEl('confirmDoneOverlay');
+  setTimeout(()=>document.getElementById('doneActualHrs')?.select(), 100);
+}
+
+function doDone() {
+  hideEl('confirmDoneOverlay');
+  if (!STATE.session || !STATE.selectedOp || !STATE.selectedJob) return;
+
+  // ── Use ENTERED hours, not wall-clock elapsed ──
+  const enteredHrs = parseFloat(document.getElementById('doneActualHrs')?.value);
+  if(!enteredHrs || enteredHrs <= 0) {
+    toast('⚠ Please enter hours worked before finishing!', true);
+    showEl('confirmDoneOverlay');
+    document.getElementById('doneActualHrs')?.focus();
+    return;
+  }
+
+  clearInterval(STATE.timerInterval);
+  clearInterval(STATE.timerInterval1s);
+
+  const op  = STATE.selectedOp;
+  const job = STATE.selectedJob;
+  const endTs  = Date.now();
+  const hrs    = enteredHrs; // operator-entered, source of truth
+  const overrun = hrs > op.allocHrs;
+  const remarks = document.getElementById('doneRemarks')?.value.trim()
+                || document.getElementById('remarksInput')?.value.trim() || '';
+  const qty = parseInt(document.getElementById('donePieces')?.value)
+            || parseInt(document.getElementById('qtyDoneInput')?.value)
+            || parseInt(document.getElementById('quickQty')?.value)
+            || parseInt(job['Qty'] || job.qty) || 1;
+
+  // Build start/end display — use original startTs for START, now for END
+  const startTs  = STATE.session.startTs;
+  const startDate = new Date(startTs).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const endDate   = new Date(endTs).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const dateStr   = startDate === endDate ? startDate : startDate + ' – ' + endDate;
+
+  // Log entry for today log display
+  STATE.todayLogs.unshift({
+    item: job['Item Desc'] || job.item || '',
+    stage: op.stage || op.id,
+    durationHrs: hrs,
+    allocHrs: op.allocHrs,
+    overrun,
+    remarks,
+    startStr: new Date(startTs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+    endStr: new Date(endTs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+  });
+
+  // Push to Google Sheet Timings tab
+  if (typeof SHEET_API_URL !== 'undefined' && SHEET_API_URL) {
+    const opRecord = OPERATORS_LIST.find(o => o.id === STATE.token) || (STATE.operator ? {name:STATE.operator.name} : null);
+    const opName   = opRecord ? opRecord.name : STATE.token;
+    const totalMins = Math.round(hrs * 60);
+    const pad2 = n => String(Math.floor(Math.abs(n))).padStart(2,'0');
+    const toHHMM = mins => pad2(mins/60)+':'+pad2(mins%60);
+    const perPcMins = totalMins / qty;
+    const sheetLog = {
+      'OPERATOR':       opName,
+      'DRG NUMBER':     job['Item Desc'] || job.item || '',
+      'OPERATION':      [...document.querySelectorAll('.op-check-btn.op-active')].map(b=>b.dataset.op).join(', ') || op.stage || op.machine || '',
+      'START TIME':     new Date(startTs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      'END TIME':       new Date(endTs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      'QUANTITY':       qty,
+      'DATE':           dateStr,
+      'REMARKS':        (overrun ? '⚠ Overrun est. ' : '') + (remarks || ''),
+      'TOTAL TIME':     toHHMM(totalMins),
+      'TIME PER PIECE': toHHMM(perPcMins),
+    };
+    fetch(SHEET_API_URL, {method:'POST', body:JSON.stringify({action:'addLog', ...sheetLog})})
+      .catch(e => console.warn('Sheet log failed', e));
+  }
+
+  // Clear persisted session from sheet + localStorage
+  clearSessionFromStorage();
+
+  // Reset state
+  STATE.session = null;
+  STATE.selectedOp = null;
+  document.getElementById('jobSelect').disabled = false;
+  document.getElementById('jobSelect').value = '';
+  hideEl('opStep2'); hideEl('opInfoCard'); hideEl('timerSection'); hideEl('allocBlock');
+  document.getElementById('btnStart').classList.remove('show');
+  document.getElementById('btnPause').classList.remove('show');
+  document.getElementById('pausedBanner').classList.remove('show');
+  document.getElementById('remarksInput').value = '';
+  document.getElementById('doneActualHrs').value = '';
+  document.getElementById('doneRemarks').value = '';
+  document.getElementById('donePieces').value = '';
+  const qi = document.getElementById('qtyDoneInput'); if(qi) qi.value = '';
+
+  renderTodayLog();
+  toast(overrun
+    ? '✓ Logged — ' + hrs + 'h (over estimate). Select job for next operation.'
+    : '✓ Logged — ' + hrs + 'h. Select job for next operation.');
+}
+
+// ═══════════════════════════════════════════
+// TODAY'S LOG
+// ═══════════════════════════════════════════
+function renderTodayLog() {
+  const section = document.getElementById('todaySection');
+  const list = document.getElementById('todayList');
+
+  if (!STATE.todayLogs.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  list.innerHTML = '';
+
+  STATE.todayLogs.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'today-entry';
+    div.innerHTML = `
+      <div class="te-left">
+        <div class="te-job">${l.po} — ${l.machine}</div>
+        <div class="te-machine">${l.stage} &nbsp;·&nbsp; ${l.item}</div>
+      </div>
+      <div class="te-right">
+        <div class="te-dur ${l.overrun?'overrun':'ok'}">${formatHrs(l.durationHrs)}</div>
+          ${l.allocHrs && l.allocHrs < 8 ? `<div style="font-size:.62rem;color:var(--text2);margin-top:2px;">Est: ${formatHrs(l.allocHrs)} · ${l.overrun?'⚠ Over':'✓ On time'}</div>` : ''}
+        <div class="te-times">${l.startStr} – ${l.endStr}</div>
+        ${l.overrun ? '<span class="te-overrun-tag">OVERRUN</span>' : ''}
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function pad(n) { return String(n).padStart(2,'0'); }
+function tsToTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+function formatHrs(h) {
+  if (h === null || h === undefined) return '—';
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  if (hh === 0) return `${mm}m`;
+  return mm > 0 ? `${hh}h ${mm}m` : `${hh}h`;
+}
+function show(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); }
+}
+function hide(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('active'); }
+}
+function showEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.classList.contains('timer-section') ||
+      el.classList.contains('remarks-wrap') ||
+      el.classList.contains('overrun-banner') ||
+      el.classList.contains('op-info-card') ||
+      el.classList.contains('alloc-time-block')) {
+    el.classList.add('show');
+  } else {
+    el.style.display = 'block';
+  }
+}
+function hideEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.classList.contains('timer-section') ||
+      el.classList.contains('remarks-wrap') ||
+      el.classList.contains('overrun-banner') ||
+      el.classList.contains('op-info-card') ||
+      el.classList.contains('alloc-time-block')) {
+    el.classList.remove('show');
+  } else {
+    el.style.display = 'none';
+  }
+}
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' err' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
