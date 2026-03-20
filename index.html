@@ -1316,7 +1316,14 @@ function renderTimings(){
     const tr=document.createElement('tr');
     if(isPartial) tr.style.cssText='background:rgba(251,191,36,.05);font-weight:700;';
     tr.innerHTML=`
-      <td style="font-family:'JetBrains Mono',monospace;font-size:.73rem;white-space:nowrap;${isPartial?'font-weight:700;':''}">${l['DATE']||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.73rem;white-space:nowrap;${isPartial?'font-weight:700;':''}">
+        ${(()=>{
+          const endMatch=(l['REMARKS']||'').match(/End:(\d{2}\/\d{2}\/\d{4})/);
+          return endMatch
+            ? (l['DATE']||'—')+'<br><span style="font-size:.65rem;color:var(--text2);">→'+endMatch[1]+'</span>'
+            : (l['DATE']||'—');
+        })()}
+      </td>
       <td style="font-weight:${isPartial?'800':'700'};${isPartial?'color:#fbbf24;':''}">${l['OPERATOR']||'—'}</td>
       <td style="font-size:.77rem;font-weight:${isPartial?'800':'400'};max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${l['DRG NUMBER']||''}">${l['DRG NUMBER']||'—'}</td>
       <td style="font-size:.76rem;color:var(--text2);">${l['OPERATION']||'—'}</td>
@@ -1463,13 +1470,30 @@ function buildHistory(){
     const k=(l['DRG NUMBER']||'').trim().toLowerCase();
     if(!k)return;
     if(!idx[k]){idx[k]={name:l['DRG NUMBER'],runs:[]};}
+    // Find matching job for est times
+    const matchJob=DB.jobs.find(j=>(j['Item Desc']||'').trim().toLowerCase()===k);
+    let estTimes={};
+    try{if(matchJob&&matchJob['Est Times'])estTimes=JSON.parse(matchJob['Est Times']);}catch(ex){}
+    const totalMins=timeToMins(l['TOTAL TIME']||'');
+    // Compute total estimated mins for this operation from job est times
+    let estMins=0;
+    const qty=parseInt(l['QUANTITY']||1);
+    Object.values(estTimes).forEach(t=>{estMins+=timeToMins(t);});
+    estMins*=qty;
+    const overrun=(totalMins>0&&estMins>0&&totalMins>estMins);
     idx[k].runs.push({
       date:l['DATE'],operator:l['OPERATOR'],operation:l['OPERATION'],
       start:l['START TIME'],end:l['END TIME'],qty:l['QUANTITY'],
-      total:l['TOTAL TIME'],perPc:l['TIME PER PIECE'],remarks:l['REMARKS']
+      total:l['TOTAL TIME'],perPc:l['TIME PER PIECE'],remarks:l['REMARKS'],
+      totalMins,estMins,overrun
     });
   });
-  Object.values(idx).forEach(e=>e.runs.sort((a,b)=>String(b.date).localeCompare(String(a.date))));
+  // Sort runs newest first; compute repeat overrun count
+  Object.values(idx).forEach(e=>{
+    e.runs.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    e.overrunCount=e.runs.filter(r=>r.overrun).length;
+    e.totalRuns=e.runs.length;
+  });
   return idx;
 }
 
@@ -1499,15 +1523,21 @@ function onItemType(v){
   });
 
   const qty=parseInt($('fQty')?.value)||1;
+  // Overrun warning for repeat offenders
+  const overrunWarn=e.overrunCount>=2
+    ?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:6px 10px;margin-bottom:8px;font-size:.72rem;color:#ef4444;font-weight:700;">⚠ This job exceeded estimated time ${e.overrunCount}× before — consider revising estimates</div>`
+    :'';
   $('sugTitle').textContent=`💡 "${e.name}" — ${e.runs.length} past run${e.runs.length!==1?'s':''}, last: ${fd(e.runs[0].date)}`;
-  $('sugBody').innerHTML=Object.entries(_sugOps).map(([op,pp])=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(99,102,241,.1);">
+  $('sugBody').innerHTML=overrunWarn+Object.entries(_sugOps).map(([op,pp])=>{
+    const mins=timeToMins(pp);
+    const minsLabel=mins>0?(mins>=60?Math.floor(mins/60)+'h '+( mins%60?mins%60+'m':''):(mins+'min')):pp;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(99,102,241,.1);">
       <span style="font-weight:600;">${op}</span>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-family:'JetBrains Mono',monospace;color:var(--ind);font-weight:700;font-size:.82rem;">${pp}/pc</span>
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--ind);font-weight:700;font-size:.82rem;">${minsLabel}/pc</span>
         ${qty>1?`<span style="font-size:.7rem;color:var(--text2);">×${qty} = ${multiplyTime(pp,qty)}</span>`:''}
       </div>
-    </div>`).join('');
+    </div>`;}).join('');
   s.classList.add('on');
 }
 
@@ -1638,16 +1668,18 @@ function renderHistory(){
             ${estPc ?`<div style="text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--gold);">${minsToHHMM(estPc)}</div><div style="font-size:.58rem;color:var(--text2);letter-spacing:.5px;">EST/PC</div></div>`:''}
           </div>
         </div>
-        ${d.runs.map(r=>`
-          <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);font-size:.74rem;flex-wrap:wrap;gap:3px;">
-            <span style="color:var(--text2);">${fd(r.date)} · <b style="color:var(--text);">${r.operator||'—'}</b></span>
-            <span style="font-family:'JetBrains Mono',monospace;display:flex;gap:10px;">
+        ${d.runs.map(r=>{
+          const overrunBadge=r.overrun?`<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;">⚠ overrun</span>`:'';
+          const rowBg=r.overrun?'background:rgba(239,68,68,.04);':'';
+          return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);font-size:.74rem;flex-wrap:wrap;gap:3px;${rowBg}">
+            <span style="color:var(--text2);">${fd(r.date)} · <b style="color:var(--text);">${r.operator||'—'}</b>${overrunBadge}</span>
+            <span style="font-family:'JetBrains Mono',monospace;display:flex;gap:10px;align-items:center;">
               <span style="color:var(--text2);">${r.start||'—'}→${r.end||'—'}</span>
-              <b style="color:var(--ind);">${r.total||'—'}</b>
+              <b style="color:${r.overrun?'#ef4444':'var(--ind)'};">${r.total||'—'}</b>
               <b style="color:var(--grn);">${r.perPc||'—'}/pc</b>
               <span style="color:var(--text2);">×${r.qty||'?'}</span>
             </span>
-          </div>`).join('')}
+          </div>`;}).join('')}
       </div>`;
     }).join('');
 
@@ -1665,6 +1697,7 @@ function renderHistory(){
           <span style="font-size:.65rem;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 7px;">${totalRuns} log${totalRuns!==1?'s':''}</span>
           <span style="font-size:.65rem;color:var(--ind);background:var(--ind-l);border-radius:5px;padding:1px 7px;">${uniqueOps} op${uniqueOps!==1?'s':''}</span>
           ${hasEst?'<span style="font-size:.65rem;color:var(--gold);background:var(--gold-l);border-radius:5px;padding:1px 7px;">⏱ estimates set</span>':''}
+          ${e.overrunCount>0?`<span style="font-size:.65rem;color:#ef4444;background:rgba(239,68,68,.12);border-radius:5px;padding:1px 7px;font-weight:700;">${e.overrunCount>=3?'🔴 repeated overrun ('+e.overrunCount+'×)':'⚠ overrun '+e.overrunCount+'×'}</span>`:''}
           ${operators.map(o=>`<span style="font-size:.62rem;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;">${o}</span>`).join('')}
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
